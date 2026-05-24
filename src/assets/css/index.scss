@@ -1,0 +1,11 @@
+// 此文件路径：/src/styles/element-plus.scss
+// 配置element-plus主题色
+@forward "element-plus/theme-chalk/src/common/var.scss" with (
+  $colors: (
+    "primary": (
+      "base": #00698c,
+    ),
+  )
+);
+
+@use "element-plus/theme-chalk/src/index.scss" as *;

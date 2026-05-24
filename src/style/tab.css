@@ -1,0 +1,29 @@
+
+  .tabs-css .el-tabs--border-card {
+    border-top: 1px solid #006487;
+  }
+  
+  .tabs-css .el-tabs__header {
+    --el-tabs-header-height: 35px;
+    background-color: #006487 !important;
+  }
+  
+  .tabs-css .el-tabs__content {
+    padding: 0px;
+  }
+  
+  .tabs-css .el-tabs__item {
+    font-size: 0.8rem;
+    color: #fff !important;
+  }
+  
+  .tabs-css .el-tabs__item.is-active {
+    color: #006487 !important;
+  }
+  .el-tabs--border-card
+    > .el-tabs__header
+    .el-tabs__item:not(.is-disabled):hover {
+    font-size: 0.8rem;
+    color: #006487 !important;
+    background-color: rgba(255, 255, 255, 0.8);
+  }
