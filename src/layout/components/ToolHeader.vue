@@ -17,12 +17,17 @@ import breadcrumb from '@/components/bread/bread.vue'
             <img src="../../assets/logo.png"  alt="北斗智联">
         </div> -->
         <div class="pr-2">
-            <img src="../../assets/logo-white.svg" width="120px" alt="">
+            <img src="../../assets/rbLOGO.png" width="100px" alt="">
           
         </div>
        
         <div class="pr-[10px]">
             <img src="../../assets/logo201.png" width="90px" alt="雨阳">
+        </div>
+
+        <div class="pr-2">
+            <img src="../../assets/logo-white.svg" width="120px" alt="">
+          
         </div>
        </div>
     </div>

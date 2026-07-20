@@ -914,3 +914,189 @@ export function UpdateCalendarPlan(data: any) {
         data
     })
 }
+
+/** 可用打印机查询 */
+export function PrinterQuery() {
+    return request({
+        url: "/api/mfgordercontainer/PrinterQuery",
+        method: "post"
+    })
+}
+
+/** 可创建条码工单查询 */
+export function MfgOrderQuery(data: any) {
+    return request({
+        url: "/api/mfgordercontainer/MfgOrderQuery",
+        method: "post",
+        data
+    })
+}
+
+/** 根据工单查明细 */
+export function MfgOrderDetailQuery(data: any) {
+    return request({
+        url: "/api/mfgordercontainer/MfgOrderDetailQuery",
+        method: "post",
+        data
+    })
+}
+
+/** 根据工单查找已生成条码列表 */
+export function MfgOrderContainerListQuery(data: any) {
+    return request({
+        url: "/api/mfgordercontainer/MfgOrderContainerListQuery",
+        method: "post",
+        data
+    })
+}
+
+/** 工单批次创建 */
+export function MfgOrderContainerStart(data: any) {
+    return request({
+        url: "/api/mfgordercontainer/MfgOrderContainerStart",
+        method: "post",
+        data
+    })
+}
+
+/** 工单批次重印 */
+export function ReprintPrint(data: any) {
+    return request({
+        url: "/api/mfgordercontainer/ReprintPrint",
+        method: "post",
+        data
+    })
+}
+
+/** 重印-查询所有工单编号 */
+export function ReprintMfgOrderList() {
+    return request({
+        url: "/api/mfgordercontainer/ReprintMfgOrderList",
+        method: "post",
+    })
+}
+
+/** 重印-根据工单/批次查询条码信息 */
+export function ReprintContainerList(data: { MfgOrderName?: string; ContainerName?: string }) {
+    return request({
+        url: "/api/mfgordercontainer/ReprintContainerList",
+        method: "post",
+        data
+    })
+}
+
+/** 车间信息查询 */
+export function WorkCenterQuery(data: any) {
+    return request({
+        url: "/api/ContainerOperation/WorkCenterQuery",
+        method: "post",
+        data
+    })
+}
+
+/** 产线查询 */
+export function MfgLineQuery(data: any) {
+    return request({
+        url: "/api/ContainerOperation/MfgLineQuery",
+        method: "post",
+        params: data
+    })
+}
+
+/** 条码扫描查询 */
+export function ContainerOperationQuery(data: any) {
+    return request({
+        url: "/api/ContainerOperation/ContainerOperationQuery",
+        method: "post",
+        data
+    })
+}
+
+/** 条码执行 */
+export function ContainerOperationExecution(data: any) {
+    return request({
+        url: "/api/ContainerOperation/ContainerOperationExecution",
+        method: "post",
+        data
+    })
+}
+
+/** 物料批次扫码（SN精追） */
+export function ComponentIssueSNQuery(data: any) {
+    return request({
+        url: "/api/ContainerOperation/ComponentIssueSNQuery",
+        method: "post",
+        data
+    })
+}
+
+/** 完工入库主查询 */
+export function QueryCompletionInboundList(data: any) {
+    return request({
+        url: "/api/CompletionInbound/QueryCompletionInboundList",
+        method: "post",
+        data
+    })
+}
+
+/** 完工入库明细查询 */
+export function QueryCompletionInboundDetailList(data: any) {
+    return request({
+        url: "/api/CompletionInbound/QueryCompletionInboundDetailList",
+        method: "post",
+        data
+    })
+}
+
+/** 保存/提交 完工入库单据 */
+export function SubmitCompletionInbound(data: any) {
+    return request({
+        url: "/api/CompletionInbound/SubmitCompletionInbound",
+        method: "post",
+        data
+    })
+}
+
+/** 扫描SN */
+export function ScanSN(data: any) {
+    return request({
+        url: "/api/CompletionInbound/ScanSN",
+        method: "post",
+        data
+    })
+}
+
+/** 工单批量入库下拉框（不用传参） */
+export function QueryBatchInboundByMfgOrder() {
+    return request({
+        url: "/api/CompletionInbound/QueryBatchInboundByMfgOrder",
+        method: "post"
+    })
+}
+
+/** 根据工单查询未入库SN明细 */
+export function QuerySNDetailByMfgOrder(data: any) {
+    return request({
+        url: "/api/CompletionInbound/QuerySNDetailByMfgOrder",
+        method: "post",
+        data
+    })
+}
+
+/** 删除完工入库单据 */
+export function DeleteCompletionInbound(data: any) {
+    return request({
+        url: "/api/CompletionInbound/DeleteCompletionInbound",
+        method: "post",
+        data
+    })
+}
+
+/** 查询仓库下拉列表 */
+export function QueryWareHouse(data?: any) {
+    return request({
+        url: "/api/CompletionInbound/QueryWareHouse",
+        method: "post",
+        data
+    })
+}

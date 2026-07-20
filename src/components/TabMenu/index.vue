@@ -1,7 +1,7 @@
 <template>
-  <div class="w-[4.8rem]  bg-[#006487]" v-click-outside="clickOut">
+  <div class="w-[4.8rem] h-full bg-[#006487] flex flex-col" v-click-outside="clickOut">
     <!-- <div class="h-[50px]"></div> -->
-    <el-scrollbar class="h-[calc(100%-120px)]">
+    <el-scrollbar class="flex-1">
       <!-- {{  routes}} -->
 
       <div class="w-[4.8rem]" v-for="item in tabRouters">
@@ -54,9 +54,9 @@
             <el-dropdown-item @click.native="openUpdatePwd"><el-icon>
                 <Key />
               </el-icon>修改密码</el-dropdown-item>
-              <!-- <el-dropdown-item @click.native="switchSystem"><el-icon>
+              <el-dropdown-item @click.native="switchSystem"><el-icon>
                 <Connection />
-              </el-icon>切换系统</el-dropdown-item> -->
+              </el-icon>切换系统</el-dropdown-item>
             <el-dropdown-item @click.native="logoutsys"><el-icon>
                 <Promotion />
               </el-icon>退出登录</el-dropdown-item>

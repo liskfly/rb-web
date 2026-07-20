@@ -364,7 +364,7 @@ const fullScreen = () => {
 }
 </script>
 <template>
-    <div class="bood  h-[35px] flex w-full relative bg-[#fff]">
+    <div class="bood  h-[35px] flex w-full relative bg-[#fff]" v-if="!appStore.getSystemType">
         <div class="overflow-hidden flex-1">
             <el-scrollbar class="h-full">
                 <div class="flex h-full items-center" v-if="!appStore.getSystemType">

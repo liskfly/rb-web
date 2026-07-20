@@ -86,18 +86,23 @@ router.beforeEach(async (to, from, next) => {
         if (data.code == 100200 || data.code == 100300) {
           if (roleRouters.length == 0) {
             if (appStore.getSystemType) {
-              await getWorksMenuOPUI().then(async (data: any) => {
-                const routerArr = data.content || [];
-                const routerData1 = setMenu(routerArr);
-                let routerData = routerData1.map((v: any) => {
-                  let data = updateParentMenus([v]);
-                  return data;
-                });
-                userStore.setRoleRouters(routerData);
-                await permissionStore.generateRoutes("server", routerData);
-              });
+              // await getWorksMenuOPUI().then(async (data: any) => {
+              //   const routerArr = data.content || [];
+              //   const routerData1 = setMenu(routerArr);
+              //   let routerData = routerData1.map((v: any) => {
+              //     let data = updateParentMenus([v]);
+              //     return data;
+              //   });
+              //   userStore.setRoleRouters(routerData);
+              //   await permissionStore.generateRoutes("server", routerData);
+              // });
+              // permissionStore.getAddRouters.forEach((route: any) => {
+              //   router.addRoute(route as unknown as RouteRecordRaw); // 动态添加可访问路由表
+              // });
+
+              await permissionStore.generateRoutes("static");
               permissionStore.getAddRouters.forEach((route: any) => {
-                router.addRoute(route as unknown as RouteRecordRaw); // 动态添加可访问路由表
+                router.addRoute(route as unknown as RouteRecordRaw);
               });
             } else {
               await getMenu().then(async (data: any) => {
@@ -133,11 +138,11 @@ router.beforeEach(async (to, from, next) => {
         }
       });
       
-      const redirectPath =
-        appStore.getSystemType && localStorage.getItem("OPUIData")
-          ? appStore.getOpuiData.path
-          : from.query.redirect || to.path;
-      // const redirectPath = from.query.redirect || to.path
+      // const redirectPath =
+      //   appStore.getSystemType && localStorage.getItem("OPUIData")
+      //     ? appStore.getOpuiData.path
+      //     : from.query.redirect || to.path;
+      const redirectPath = "/productionStation/index";
       const redirect = decodeURIComponent(redirectPath as string);
       const nextData =
         to.path === redirect ? { ...to, replace: true } : { path: redirect };
