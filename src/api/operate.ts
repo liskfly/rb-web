@@ -1030,6 +1030,17 @@ export function ComponentIssueSNQuery(data: any) {
     })
 }
 
+/** 容器数据采集项历史记录查询 */
+export function ContainerDataPointHistoryQuery(data: any) {
+    return request({
+        url: "/api/ContainerOperation/ContainerDataPointHistoryQuery",
+        method: "post",
+        params: {
+            ContainerName: data
+        }
+    })
+}
+
 /** 完工入库主查询 */
 export function QueryCompletionInboundList(data: any) {
     return request({
@@ -1096,6 +1107,117 @@ export function DeleteCompletionInbound(data: any) {
 export function QueryWareHouse(data?: any) {
     return request({
         url: "/api/CompletionInbound/QueryWareHouse",
+        method: "post",
+        data
+    })
+}
+
+/** 工单领料-车间名称查询 */
+export function WorkOrderOperationWorkCenterQuery() {
+    return request({
+        url: "/api/PickMaterialsForWorkOrder/WorkOrderOperationWorkCenterQuery",
+        method: "post"
+    })
+}
+
+/** 工单领料-生产线名称查询 */
+export function WorkOrderOperationMfgLineQuery() {
+    return request({
+        url: "/api/PickMaterialsForWorkOrder/WorkOrderOperationMfgLineQuery",
+        method: "post"
+    })
+}
+
+/** 工单领料-工单查询 */
+export function WorkOrderOperationMfgOrderQuery() {
+    return request({
+        url: "/api/PickMaterialsForWorkOrder/WorkOrderOperationMfgOrderQuery",
+        method: "post"
+    })
+}
+
+/** 工单领料-产品系列名称查询 */
+export function WorkOrderOperationProductFamilyQuery() {
+    return request({
+        url: "/api/PickMaterialsForWorkOrder/WorkOrderOperationProductFamilyQuery",
+        method: "post"
+    })
+}
+
+/** 工单领料-产品类型名称查询 */
+export function WorkOrderOperationProductTypeQuery() {
+    return request({
+        url: "/api/PickMaterialsForWorkOrder/WorkOrderOperationProductTypeQuery",
+        method: "post"
+    })
+}
+
+/** 工单领料主页面查询 */
+export function WorkOrderOperationQuery(data: any) {
+    return request({
+        url: "/api/PickMaterialsForWorkOrder/WorkOrderOperationQuery",
+        method: "post",
+        data
+    })
+}
+
+/** 可用仓库查询 */
+export function WareHouseQuery() {
+    return request({
+        url: "/api/PickMaterialsForWorkOrder/WareHouseQuery",
+        method: "post"
+    })
+}
+
+/** 根据工单信息查询物料明细 */
+export function WorkOrderMaterialDetailQuery(params: any) {
+    return request({
+        url: "/api/PickMaterialsForWorkOrder/WorkOrderMaterialDetailQuery",
+        method: "post",
+        params
+    })
+}
+
+/** 查询ERP可用库存 */
+export function GetErpStock(data: any) {
+    return request({
+        url: "/api/PickMaterialsForWorkOrder/GetErpStock",
+        method: "post",
+        data
+    })
+}
+
+/** 提交领料申请 */
+export function SubmitPickupOrder(data: any) {
+    return request({
+        url: "/api/PickMaterialsForWorkOrder/SubmitPickupOrder",
+        method: "post",
+        data
+    })
+}
+
+/** 发料单表头信息查询 */
+export function MaterialIssueList(data: any) {
+    return request({
+        url: "/api/PickMaterialsForWorkOrder/MaterialIssueList",
+        method: "post",
+        data
+    })
+}
+
+/** 发料单明细信息查询 */
+export function MaterialIssueDetail(params: any) {
+    return request({
+        url: "/api/PickMaterialsForWorkOrder/MaterialIssueDetail",
+        method: "post",
+        params
+    })
+}
+
+/** 提交发料 */
+export function SubmitMaterialIssue(data: any) {
+    return request({
+        url: "/api/PickMaterialsForWorkOrder/SubmitMaterialIssue",
         method: "post",
         data
     })

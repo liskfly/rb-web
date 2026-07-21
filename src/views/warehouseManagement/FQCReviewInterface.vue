@@ -270,7 +270,7 @@
             <el-option
               v-for="item in wareHouseOptions"
               :key="item.WareHouse"
-              :label="item.WareHouse"
+              :label="item.Description"
               :value="item.WareHouse"
             />
           </el-select>

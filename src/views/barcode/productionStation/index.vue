@@ -131,7 +131,8 @@
 
           <!-- ===== UserDataCollectionDef ===== -->
           <template v-if="serviceType === 'UserDataCollectionDef' && dataCollectionList.length > 0">
-            <div class="flex justify-end mb-2 flex-shrink-0">
+            <div class="flex justify-between mb-2 flex-shrink-0">
+              <el-button type="warning" size="small" @click="handleHistoryQuery">查看历史采集数据</el-button>
               <el-button type="primary" size="small" @click="submitDataCollection">提交采集数据</el-button>
             </div>
             <el-table :data="dataCollectionList" size="small" border style="width:100%" height="100%">
@@ -257,6 +258,48 @@
       </div>
     </div>
   </div>
+
+  <!-- 历史采集数据 Dialog -->
+  <el-dialog
+    v-model="historyDialogVisible"
+    title="历史采集数据"
+    draggable
+    width="800px"
+    :close-on-click-modal="false"
+    align-center
+  >
+    <el-tabs v-model="historyActiveTab" type="border-card">
+      <el-tab-pane
+        v-for="(group, idx) in historyData"
+        :key="idx"
+        :label="group.SpecName || '工序' + (idx + 1)"
+        :name="String(idx)"
+      >
+        <el-table :data="group.Records" size="small" border style="width: 100%" max-height="400">
+          <el-table-column type="index" label="序号" width="50" align="center" />
+          <el-table-column prop="TxnDate" label="采集时间" width="170" />
+          <el-table-column prop="DataName" label="数据项" min-width="150" show-overflow-tooltip />
+          <el-table-column prop="DataValue" label="采集值" min-width="90" />
+          <el-table-column prop="LowerLimit" label="下限" width="80" align="center">
+            <template #default="scope">
+              <span>{{ scope.row.LowerLimit ?? '-' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="UpperLimit" label="上限" width="80" align="center">
+            <template #default="scope">
+              <span>{{ scope.row.UpperLimit ?? '-' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="UOMName" label="单位" width="90" align="center">
+            <template #default="scope">
+              <span>{{ scope.row.UOMName || '-' }}</span>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-tab-pane>
+    </el-tabs>
+    <el-empty v-if="historyData.length === 0" description="暂无历史采集数据" />
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
@@ -265,7 +308,7 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import { useRouter } from "vue-router";
 import { useAppStore } from "@/stores/modules/app";
 import { useUserStoreWithOut } from "@/stores/modules/user";
-import { WorkCenterQuery, MfgLineQuery, ContainerOperationQuery, ContainerOperationExecution, ComponentIssueSNQuery } from "@/api/operate";
+import { WorkCenterQuery, MfgLineQuery, ContainerOperationQuery, ContainerOperationExecution, ComponentIssueSNQuery, ContainerDataPointHistoryQuery } from "@/api/operate";
 
 const { push } = useRouter();
 const appStore = useAppStore();
@@ -311,6 +354,27 @@ const dataCollectionList = ref<any[]>([]);
 const treeComponentData = ref<any[]>([]);
 const moveInResource = ref("");
 const resourceOptions = ref<any[]>([]);
+
+// ====== 历史采集数据 ======
+const historyDialogVisible = ref(false);
+const historyData = ref<any[]>([]);
+const historyActiveTab = ref("0");
+
+const handleHistoryQuery = async () => {
+  if (!info.value.ContainerName) {
+    ElMessage.warning("请先扫描条码");
+    return;
+  }
+  const res: any = await ContainerDataPointHistoryQuery(info.value.ContainerName);
+  if (res && res.success && res.code === 0) {
+    historyData.value = res.content || [];
+    historyActiveTab.value = "0";
+    historyDialogVisible.value = true;
+  } else {
+    ElMessage.error((res && res.msg) || "查询历史采集数据失败");
+    historyData.value = [];
+  }
+};
 
 const lotData = computed(() =>
   treeComponentData.value.filter((item) => item.TypeName === 'Lot')
