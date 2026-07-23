@@ -1,35 +1,5 @@
 <template>
   <div class="flex flex-col h-full">
-    <!-- ====== 头部栏：车间 + 产线下拉 + 切换系统/退出 ====== -->
-    <div class="h-[40px] pl-2 pr-2 flex items-center justify-between bg-white border-b flex-shrink-0">
-      <div class="flex items-center gap-4">
-        <div class="flex items-center gap-1">
-          <span class="font-bold text-sm whitespace-nowrap">车间：</span>
-          <el-select v-model="selectedWorkCenter" placeholder="请选择车间" size="small" style="width: 220px"
-            @change="handleWorkCenterChange">
-            <el-option v-for="item in workCenterOptions" :key="item.WorkCenterName" :label="item.Description"
-              :value="item.WorkCenterName" />
-          </el-select>
-        </div>
-        <div class="flex items-center gap-1">
-          <span class="font-bold text-sm whitespace-nowrap">产线：</span>
-          <el-select v-model="selectedMfgLine" placeholder="请先选择车间" size="small" style="width: 220px"
-            :disabled="!selectedWorkCenter">
-            <el-option v-for="item in mfgLineOptions" :key="item.MfgLineName" :label="item.Description"
-              :value="item.MfgLineName" />
-          </el-select>
-        </div>
-      </div>
-      <div class="flex items-center gap-2">
-        <el-button size="small" @click="switchSystem">
-          <el-icon><Connection /></el-icon> 切换系统
-        </el-button>
-        <el-button size="small" @click="logoutsys">
-          <el-icon><Promotion /></el-icon> 退出登录
-        </el-button>
-      </div>
-    </div>
-
     <!-- 标题 -->
     <div class="h-[40px] pl-2 pr-2 flex items-center bg-[#006487] text-white text-lg font-bold flex-shrink-0">
       <span>生产过站</span>
@@ -687,15 +657,19 @@ const submitDataCollection = async () => {
 
 onMounted(() => {
   getWorkCenters();
-  // 读取登录返回的车间产线
-  const savedWorkCenter = localStorage.getItem("LOGIN_WORKCENTER");
-  const savedMfgLine = localStorage.getItem("LOGIN_MFGLINE");
-  if (savedWorkCenter) {
-    selectedWorkCenter.value = savedWorkCenter;
-    handleWorkCenterChange(savedWorkCenter);
-  }
-  if (savedMfgLine) {
-    selectedMfgLine.value = savedMfgLine;
+  // 读取 TagsView 设置的车间产线（OPUIData）
+  const opuiData = localStorage.getItem("OPUIData");
+  if (opuiData) {
+    try {
+      const data = JSON.parse(opuiData);
+      if (data.workShop) {
+        selectedWorkCenter.value = data.workShop;
+        handleWorkCenterChange(data.workShop);
+      }
+      if (data.line) {
+        selectedMfgLine.value = data.line;
+      }
+    } catch {}
   }
 });
 

@@ -97,25 +97,6 @@ export const constantRouterMap = [
 ]
 
 export const asyncRouterMap = [
-  {
-    path: '/productionStation',
-    component: Layout,
-    name: 'ProductionStation',
-    meta: {
-      title: '生产过站',
-      icon: 'Operation',
-    },
-    children: [
-      {
-        path: 'index',
-        component: () => import('@/views/barcode/productionStation/index.vue'),
-        name: 'ProductionStationIndex',
-        meta: {
-          title: '生产过站',
-        }
-      },
-    ]
-  },
   // {
   //   path: '/guide',
   //   component: Layout,

@@ -86,23 +86,22 @@ router.beforeEach(async (to, from, next) => {
         if (data.code == 100200 || data.code == 100300) {
           if (roleRouters.length == 0) {
             if (appStore.getSystemType) {
-              // await getWorksMenuOPUI().then(async (data: any) => {
-              //   const routerArr = data.content || [];
-              //   const routerData1 = setMenu(routerArr);
-              //   let routerData = routerData1.map((v: any) => {
-              //     let data = updateParentMenus([v]);
-              //     return data;
-              //   });
-              //   userStore.setRoleRouters(routerData);
-              //   await permissionStore.generateRoutes("server", routerData);
-              // });
-              // permissionStore.getAddRouters.forEach((route: any) => {
-              //   router.addRoute(route as unknown as RouteRecordRaw); // 动态添加可访问路由表
-              // });
-
-              await permissionStore.generateRoutes("static");
-              permissionStore.getAddRouters.forEach((route: any) => {
-                router.addRoute(route as unknown as RouteRecordRaw);
+              await getMenu().then(async (data: any) => {
+                if (data.code == 100200) {
+                  const routerArr = data.content || [];
+                  const opuiMenu = routerArr.length >= 3 ? routerArr[2] : null;
+                  if (!opuiMenu || !opuiMenu.childMenu) {
+                    await permissionStore.generateRoutes("static");
+                  } else {
+                    userStore.setRoleRouters(opuiMenu.childMenu);
+                    await permissionStore.generateRoutes("server", opuiMenu.childMenu);
+                  }
+                } else {
+                  await permissionStore.generateRoutes("static");
+                }
+                permissionStore.getAddRouters.forEach((route: any) => {
+                  router.addRoute(route as unknown as RouteRecordRaw);
+                });
               });
             } else {
               await getMenu().then(async (data: any) => {

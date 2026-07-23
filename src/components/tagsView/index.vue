@@ -18,6 +18,7 @@ const routeData = userStore.getRoleRouters
 const loginName = userStore.getUserInfo
 import { filterBreadcrumb } from "@/components/bread/helper";
 import { filter, treeToList } from "@/utils/tree";
+import { WorkCenterQuery, MfgLineQuery } from "@/api/operate";
 import { updatePassword, GetVersion } from "@/api/permiss"
 import { ElNotification, ElMessage, ElMessageBox } from "element-plus";
 
@@ -121,6 +122,25 @@ watch(
 onMounted(() => {
     initTags()
     addTags()
+    // 从 localStorage 恢复 OPUIData 显示值
+    const saved = localStorage.getItem('OPUIData')
+    if (saved) {
+        try {
+            const data = JSON.parse(saved)
+            if (data.workShop) OPUIData.value.workShop = data.workShop
+            if (data.workShopDec) OPUIData.value.workShopDec = data.workShopDec
+            if (data.line) OPUIData.value.line = data.line
+            if (data.lineDec) OPUIData.value.lineDec = data.lineDec
+            if (data.path) OPUIData.value.path = data.path
+        } catch {}
+    }
+    // 首次没有 OPUIData 时，从登录信息初始化车间产线
+    if (!OPUIData.value.workShop) {
+        const loginWork = localStorage.getItem('LOGIN_WORKCENTER')
+        const loginLine = localStorage.getItem('LOGIN_MFGLINE')
+        if (loginWork) OPUIData.value.workShop = loginWork
+        if (loginLine) OPUIData.value.line = loginLine
+    }
 })
 onActivated(() => {
     // console.log(111)
@@ -213,7 +233,7 @@ const addVisible = ref(false)
 const form = ref({
     work: '',
     line: '',
-    station: ''
+    station: [] as string[]
 })
 const OPUIData = ref(
     {
@@ -236,7 +256,7 @@ const rules = reactive({
         { required: true, message: '请选择产线', trigger: 'change' },
     ],
     station: [
-        { required: true, message: '请选择工位', trigger: 'change' },
+        { required: true, message: '请选择菜单页面', trigger: 'change' },
     ],
 })
 
@@ -247,33 +267,95 @@ const tabRouters = computed(() => {
 }
 );
 const formRef = ref()
-const options2 = ref()
-const options3 = ref()
-const openAdd = () => {
+const workCenterOptions = ref<any[]>([])
+const mfgLineOptions = ref<any[]>([])
+
+// 车间、产线 API 加载（同生产过站）
+const getWorkCenters = async () => {
+  const res: any = await WorkCenterQuery({});
+  if (res && res.success && res.code === 0) {
+    workCenterOptions.value = res.content || [];
+  }
+};
+
+const handleWorkChange = async (val: string) => {
+  form.value.line = '';
+  form.value.station = [];
+  mfgLineOptions.value = [];
+  OPUIData.value.workShop = val;
+  const item = workCenterOptions.value.find((w: any) => w.WorkCenterName === val);
+  OPUIData.value.workShopDec = item ? item.Description : '';
+  if (!val) return;
+  const res: any = await MfgLineQuery({ WorkCenterName: val });
+  if (res && res.success && res.code === 0) {
+    mfgLineOptions.value = res.content || [];
+  }
+};
+
+const handleLineChange = (val: string) => {
+  form.value.station = [];
+  OPUIData.value.line = val;
+  const item = mfgLineOptions.value.find((w: any) => w.MfgLineName === val);
+  OPUIData.value.lineDec = item ? item.Description : '';
+};
+
+// 菜单级联选择器：取 OPUI 菜单树
+const menuCascaderOptions = computed(() => {
+  return (routeData || []).map((m: any) => ({
+    value: m.path,
+    label: m.title,
+    children: (m.childMenu || []).map((c: any) => ({
+      value: c.path,
+      label: c.title,
+      children: (c.childMenu || []).map((g: any) => ({
+        value: g.path,
+        label: g.title,
+      })),
+    })),
+  }));
+});
+
+const openAdd = async () => {
     addVisible.value = true
+    backupOPUIData.value = { ...OPUIData.value }
+    await getWorkCenters()
+    // 预填当前车间/产线
+    if (OPUIData.value.workShop) {
+        form.value.work = OPUIData.value.workShop
+        await handleWorkChange(OPUIData.value.workShop)
+        if (OPUIData.value.line) {
+            form.value.line = OPUIData.value.line
+        }
+    }
 }
+
+const backupOPUIData = ref({} as any)
+const isSubmitted = ref(false)
 
 const addCancel = () => {
     addVisible.value = false
     formRef.value.resetFields();
-    cleanOPUIData()
+    if (isSubmitted.value) {
+        isSubmitted.value = false
+        return
+    }
+    // 取消时恢复旧值
+    OPUIData.value = { ...backupOPUIData.value }
 }
 
 const onSubmit = () => {
     formRef.value.validate((valid: any) => {
         if (valid) {
-            let str = form.
-                value.work + '/' + form.value.line + '/' + form.value.station
-            OPUIData.value.path = str
-            // localStorage.setItem('OPUI', str)
+            let pathStr = ('/' + form.value.station.join('/')).replace(/\/\//g, '/')
+            console.log('跳转路径:', pathStr, 'station:', form.value.station);
+            OPUIData.value.path = pathStr
             localStorage.setItem('OPUIData', JSON.stringify(OPUIData.value))
-            push(str)
+            push(pathStr)
             formRef.value.resetFields();
+            isSubmitted.value = true
             addVisible.value = false
-            cleanOPUIData()
-            // console.log(OPUIData.value)
         } else {
-            console.log("error submit!!");
+            console.log("校验失败", form.value);
             return false;
         }
     })
@@ -286,37 +368,8 @@ const cleanOPUIData = () => {
     OPUIData.value.lineDec = ''
     OPUIData.value.station = ''
     OPUIData.value.stationDec = ''
-    // OPUIData.value.equipment = ''
-    // OPUIData.value.equipmentDesc = ''
     OPUIData.value.path = ''
 
-}
-const meunItem = (value: any) => {
-    let data = routeData.filter((v: any) => v.path === value)
-    let data1 = cloneDeep(data)
-    OPUIData.value.workShop = data1[0].MenuName
-    OPUIData.value.workShopDec = data1[0].title
-    options2.value = data1[0].childMenu
-    options3.value = []
-    form.value.line = ''
-    form.value.station = ''
-}
-const meunItem2 = (value: any) => {
-    // options3.value = []
-    let data = options2.value.filter((v: any) => v.path === value)
-    let data1 = cloneDeep(data)
-    OPUIData.value.line = data1[0].MenuName
-    OPUIData.value.lineDec = data1[0].title
-    options3.value = data1[0].childMenu
-    form.value.station = ''
-}
-const meunItem3 = (value: any) => {
-    let data = options3.value.filter((v: any) => v.path === value)
-    let data1 = cloneDeep(data)
-    OPUIData.value.station = data1[0].MenuName
-    OPUIData.value.stationDec = data1[0].title
-    // OPUIData.value.equipment = data1[0].EquipmentName
-    // OPUIData.value.equipmentDesc = data1[0].EquipmentDesc
 }
 const menuRouters = computed(() => {
     const routers = permissionStore.getRouters;
@@ -364,7 +417,7 @@ const fullScreen = () => {
 }
 </script>
 <template>
-    <div class="bood  h-[35px] flex w-full relative bg-[#fff]" v-if="!appStore.getSystemType">
+    <div class="bood  h-[35px] flex w-full relative bg-[#fff]">
         <div class="overflow-hidden flex-1">
             <el-scrollbar class="h-full">
                 <div class="flex h-full items-center" v-if="!appStore.getSystemType">
@@ -401,11 +454,8 @@ const fullScreen = () => {
                                     <Setting />
                                 </el-icon>
                             </el-tooltip>
-                            <div v-for="(v, i) in treeToList(unref(levelList))" :key="v.name">{{
-                                textArr[i]
-                            }}<span class="text-[1.1rem] text-[#006487] underline">&nbsp;{{ v.meta.title
-                                    }}&nbsp;</span>
-                            </div>
+                            <span>车间：<span class="text-[1.1rem] text-[#006487] underline">&nbsp;{{ OPUIData.workShopDec || '-' }}&nbsp;</span></span>
+                            <span>产线：<span class="text-[1.1rem] text-[#006487] underline">&nbsp;{{ OPUIData.lineDec || '-' }}&nbsp;</span></span>
                         </div>
                         <div class="flex items-center gap-3">
 
@@ -458,25 +508,21 @@ const fullScreen = () => {
                     label-width="auto">
                     <el-form-item label="车间" prop="work">
                         <el-select v-model="form.work" placeholder="选择车间" size="large" style="width:100%;"
-                            @change="meunItem">
-                            <el-option v-for="item in routeData" :key="item.MenuName" :label="item.title"
-                                :value="item.path" />
+                            @change="handleWorkChange">
+                            <el-option v-for="item in workCenterOptions" :key="item.WorkCenterName" :label="item.Description"
+                                :value="item.WorkCenterName" />
                         </el-select>
                     </el-form-item>
                     <el-form-item label="产线" prop="line">
                         <el-select v-model="form.line" placeholder="选择产线" size="large" style="width:100%;"
-                            @change="meunItem2">
-                            <el-option v-for="item in options2" :key="item.MenuName" :label="item.title"
-                                :value="item.path" />
+                            :disabled="!form.work" @change="handleLineChange">
+                            <el-option v-for="item in mfgLineOptions" :key="item.MfgLineName" :label="item.Description"
+                                :value="item.MfgLineName" />
                         </el-select>
-                        <!-- :disabled="item.childMenu.length == 0" -->
                     </el-form-item>
-                    <el-form-item label="工位" prop="station">
-                        <el-select v-model="form.station" @change="meunItem3" placeholder="选择工位" size="large"
-                            style="width:100%;">
-                            <el-option v-for="item in options3" :key="item.MenuName" :label="item.title"
-                                :value="item.path" />
-                        </el-select>
+                    <el-form-item label="菜单" prop="station">
+                        <el-cascader v-model="form.station" :options="menuCascaderOptions" placeholder="选择页面" size="large"
+                            style="width:100%;" :props="{ value: 'value', label: 'label', children: 'children', checkStrictly: false }" />
                     </el-form-item>
                 </el-form>
             </div>

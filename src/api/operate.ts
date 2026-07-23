@@ -1041,6 +1041,15 @@ export function ContainerDataPointHistoryQuery(data: any) {
     })
 }
 
+/** 工单查询（容器操作） */
+export function ContainersOperationMfgOrderQuery() {
+    return request({
+        url: "/api/ContainersOperation/MfgOrderQuery",
+        method: "post"
+    })
+}
+
+
 /** 完工入库主查询 */
 export function QueryCompletionInboundList(data: any) {
     return request({
@@ -1218,6 +1227,33 @@ export function MaterialIssueDetail(params: any) {
 export function SubmitMaterialIssue(data: any) {
     return request({
         url: "/api/PickMaterialsForWorkOrder/SubmitMaterialIssue",
+        method: "post",
+        data
+    })
+}
+
+/** 根据工单查询可执行批次列表及历史采集数据（容器操作） */
+export function ContainersOperationMfgOrderDetailQuery(MfgOrderName: string) {
+    return request({
+        url: "/api/ContainersOperation/MfgOrderDetailQuery",
+        method: "post",
+        params: { MfgOrderName }
+    })
+}
+
+/** 根据条码查询批次信息及历史采集数据（容器操作） */
+export function ContainersOperationContainerDetailQuery(containerName: string) {
+    return request({
+        url: "/api/ContainersOperation/ContainerDetailQuery",
+        method: "post",
+        params: { containerName }
+    })
+}
+
+/** 条码执行（容器操作） */
+export function ContainersOperationContainerOperationExecution(data: any) {
+    return request({
+        url: "/api/ContainersOperation/ContainerOperationExecution",
         method: "post",
         data
     })
