@@ -102,7 +102,10 @@
           <!-- ===== UserDataCollectionDef ===== -->
           <template v-if="serviceType === 'UserDataCollectionDef' && dataCollectionList.length > 0">
             <div class="flex justify-between mb-2 flex-shrink-0">
-              <el-button type="warning" size="small" @click="handleHistoryQuery">查看历史采集数据</el-button>
+              <div class="flex items-center gap-2">
+                <el-button type="warning" size="small" @click="handleHistoryQuery">查看历史采集数据</el-button>
+                <el-button v-if="hasBatchDataCollection" type="success" size="small" @click="push('/dipWork/batchDataCollection')">批量数据采集</el-button>
+              </div>
               <el-button type="primary" size="small" @click="submitDataCollection">提交采集数据</el-button>
             </div>
             <el-table :data="dataCollectionList" size="small" border style="width:100%" height="100%">
@@ -280,7 +283,16 @@ import { useAppStore } from "@/stores/modules/app";
 import { useUserStoreWithOut } from "@/stores/modules/user";
 import { WorkCenterQuery, MfgLineQuery, ContainerOperationQuery, ContainerOperationExecution, ComponentIssueSNQuery, ContainerDataPointHistoryQuery } from "@/api/operate";
 
-const { push } = useRouter();
+const router = useRouter();
+const { push } = router;
+const goBatchDataCollection = () => {
+  router.push('/dipWork/batchDataCollection');
+};
+
+const hasBatchDataCollection = computed(() => {
+  const routes = router.getRoutes();
+  return routes.some((r) => r.name === 'batchDataCollection');
+});
 const appStore = useAppStore();
 const userStore = useUserStoreWithOut();
 

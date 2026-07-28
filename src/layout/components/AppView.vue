@@ -2,12 +2,8 @@
   <div>
     <router-view>
       <template #default="{ Component, route }">
-        <transition
-        
-         name="fade" 
-          mode="out-in"
-        >
-          <keep-alive :include="getCaches">
+        <transition name="fade">
+          <keep-alive>
             <component :is="Component" :key="route.fullPath" />
           </keep-alive>
         </transition>

@@ -89,7 +89,7 @@ router.beforeEach(async (to, from, next) => {
               await getMenu().then(async (data: any) => {
                 if (data.code == 100200) {
                   const routerArr = data.content || [];
-                  const opuiMenu = routerArr.length >= 3 ? routerArr[2] : null;
+                  const opuiMenu = routerArr.find((v: any) => v.MenuName === 'OPUI') || null;
                   if (!opuiMenu || !opuiMenu.childMenu) {
                     await permissionStore.generateRoutes("static");
                   } else {
@@ -137,11 +137,10 @@ router.beforeEach(async (to, from, next) => {
         }
       });
       
-      // const redirectPath =
-      //   appStore.getSystemType && localStorage.getItem("OPUIData")
-      //     ? appStore.getOpuiData.path
-      //     : from.query.redirect || to.path;
-      const redirectPath = "/productionStation/index";
+      const redirectPath =
+        appStore.getSystemType && localStorage.getItem("OPUIData")
+          ? appStore.getOpuiData.path
+          : from.query.redirect || to.path;
       const redirect = decodeURIComponent(redirectPath as string);
       const nextData =
         to.path === redirect ? { ...to, replace: true } : { path: redirect };
