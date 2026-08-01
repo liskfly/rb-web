@@ -99,6 +99,15 @@
             >
               <el-table-column prop="ContainerName" label="SN码" width="160" fixed="left" show-overflow-tooltip />
               <el-table-column v-for="(item, idx) in dataCollectionItems" :key="idx" :label="item.DataPointName" min-width="180">
+                <template #header v-if="item.Type === 'Boolean'">
+                  <div class="flex flex-col items-center">
+                    <span>{{ item.DataPointName }}</span>
+                    <div class="flex gap-1">
+                      <el-button size="small" text @click="batchSetBoolean(idx, item.BooleanTrue || true)">{{ item.BooleanTrue || '全True' }}</el-button>
+                      <el-button size="small" text @click="batchSetBoolean(idx, item.BooleanFalse || false)">{{ item.BooleanFalse || '全False' }}</el-button>
+                    </div>
+                  </div>
+                </template>
                 <template #default="scope">
                   <template v-if="item.Type === 'Boolean'">
                     <el-radio-group v-model="scope.row.values[idx]" size="small">
@@ -182,6 +191,12 @@ const info = ref({
 const dataCollectionItems = ref<any[]>([]);
 const batchList = ref<any[]>([]);
 const lastKeyFields = ref<any>({});
+
+const batchSetBoolean = (idx: number, value: any) => {
+  batchList.value.forEach((row: any) => {
+    row.values[idx] = value;
+  });
+};
 
 // 历史数据弹窗
 const historyDialogVisible = ref(false);
