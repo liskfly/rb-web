@@ -20,7 +20,15 @@
             <el-option v-for="item in mfgOrderOptions" :key="item.MfgOrderName" :label="item.MfgOrderName" :value="item.MfgOrderName" />
           </el-select>
         </div>
+        <div class="flex items-center gap-3">
+          <el-radio v-model="entryMode" value="resource" @change="handleRadioChange">设备进站</el-radio>
+          <el-select v-model="resourceName" placeholder="请选择设备" size="large" clearable filterable style="width: 240px"
+            @change="resourceName && handleQuery()">
+            <el-option v-for="item in resourceOptions" :key="item.ResourceName" :label="item.ResourceName" :value="item.ResourceName" />
+          </el-select>
+        </div>
         <el-button type="primary" size="large" @click="handleSubmit">提交</el-button>
+        <el-button size="large" @click="router.push('/dipWork/productionStation')">生产过站</el-button>
       </div>
 
       <!-- ====== 工单信息 ====== -->
@@ -93,9 +101,9 @@
               <el-table-column v-for="(item, idx) in dataCollectionItems" :key="idx" :label="item.DataPointName" min-width="180">
                 <template #default="scope">
                   <template v-if="item.Type === 'Boolean'">
-                    <el-radio-group v-model="scope.row.values[idx]" size="small" :disabled="item.Type === 'Fixed'">
-                      <el-radio :value="true">True</el-radio>
-                      <el-radio :value="false">False</el-radio>
+                    <el-radio-group v-model="scope.row.values[idx]" size="small">
+                      <el-radio :value="item.BooleanTrue || true">{{ item.BooleanTrue || 'True' }}</el-radio>
+                      <el-radio :value="item.BooleanFalse || false">{{ item.BooleanFalse || 'False' }}</el-radio>
                     </el-radio-group>
                   </template>
                   <template v-else>
@@ -142,10 +150,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
-import { ContainersOperationMfgOrderQuery, ContainersOperationMfgOrderDetailQuery, ContainersOperationContainerDetailQuery, ContainersOperationContainerOperationExecution } from "@/api/operate";
+import { ContainersOperationMfgOrderQuery, ContainersOperationMfgOrderDetailQuery, ContainersOperationContainerDetailQuery, ContainersOperationResourceQuery, ContainersOperationResourceDetailQuery, ContainersOperationContainerOperationExecution } from "@/api/operate";
 import { useUserStoreWithOut } from '@/stores/modules/user';
 
+const router = useRouter();
 const userStore = useUserStoreWithOut();
 const entryMode = ref("sn");
 
@@ -154,11 +164,15 @@ const handleRadioChange = () => {
     handleQuery();
   } else if (entryMode.value === 'order' && mfgOrder.value) {
     handleQuery();
+  } else if (entryMode.value === 'resource' && resourceName.value) {
+    handleQuery();
   }
 };
 const snInput = ref("");
 const mfgOrder = ref("");
 const mfgOrderOptions = ref<any[]>([]);
+const resourceName = ref("");
+const resourceOptions = ref<any[]>([]);
 
 const info = ref({
   MfgOrderName: "", OrderStatusName: "", PlannedQuantity: null as number | null,
@@ -200,9 +214,12 @@ const handleQuery = async () => {
     const scannedSN = snInput.value;
     res = await ContainersOperationContainerDetailQuery(scannedSN);
     snInput.value = '';
-  } else {
+  } else if (entryMode.value === 'order') {
     if (!mfgOrder.value) { ElMessage.warning('请选择工单'); return; }
     res = await ContainersOperationMfgOrderDetailQuery(mfgOrder.value);
+  } else {
+    if (!resourceName.value) { ElMessage.warning('请选择设备'); return; }
+    res = await ContainersOperationResourceDetailQuery(resourceName.value);
   }
   if (res && res.success && res.code === 0 && res.content) {
     const d = res.content;
@@ -222,8 +239,8 @@ const handleQuery = async () => {
     };
     dataCollectionItems.value = newItems;
 
-    if (entryMode.value === 'order') {
-      // 工单模式：直接覆盖
+    if (entryMode.value === 'order' || entryMode.value === 'resource') {
+      // 工单/设备模式：直接覆盖
       batchList.value = newBatches;
     } else {
       // SN模式：检查关键字段
@@ -296,6 +313,10 @@ onMounted(async () => {
   const res: any = await ContainersOperationMfgOrderQuery();
   if (res && res.success && res.code === 0) {
     mfgOrderOptions.value = res.content || [];
+  }
+  const resourceRes: any = await ContainersOperationResourceQuery();
+  if (resourceRes && resourceRes.success && resourceRes.code === 0) {
+    resourceOptions.value = resourceRes.content || [];
   }
 });
 </script>

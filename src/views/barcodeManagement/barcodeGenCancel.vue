@@ -114,6 +114,7 @@
           <el-col :span="12" class="flex items-end justify-end" style="padding-bottom: 8px">
             <el-button type="primary" size="small" @click="handleGenerate">生成并打印</el-button>
             <el-button type="warning" size="small" @click="handleReprint">重印</el-button>
+            <el-button type="success" size="small" @click="handleBoxPrint">箱码打印</el-button>
           </el-col>
         </el-row>
       </el-form>
@@ -227,6 +228,7 @@ import {
   MfgOrderContainerListQuery,
   MfgOrderContainerStart,
   ReprintPrint,
+  BoxPrinting,
 } from "@/api/operate";
 
 // 导入新接口
@@ -446,6 +448,34 @@ const handleReprint = async () => {
     handleOrderChange(orderNo);
   } else {
     ElMessage.error(printRes.msg || "重印失败");
+  }
+};
+
+const handleBoxPrint = async () => {
+  if (selectedLeftRows.value.length === 0) {
+    ElMessage.warning("请先在左侧表格勾选要箱码打印的条码");
+    return;
+  }
+  if (!form.value.printer) {
+    ElMessage.warning("请选择打印机");
+    return;
+  }
+  const orderNo = selectedLeftRows.value[0]?.orderNo;
+  if (!orderNo) {
+    ElMessage.warning("无法获取工单号，请重新勾选");
+    return;
+  }
+  const res: any = await BoxPrinting({
+    PrinterName: form.value.printer,
+    MfgOrderName: orderNo,
+    reprintPrintContainerLists: selectedLeftRows.value.map((row: any) => ({ ContainerName: row.barcode })),
+  });
+  if (res.success && res.code === 0) {
+    leftTableRef.value?.clearSelection();
+    selectedLeftRows.value = [];
+    ElMessage.success(res.msg || "箱码打印成功");
+  } else {
+    ElMessage.error(res.msg || "箱码打印失败");
   }
 };
 

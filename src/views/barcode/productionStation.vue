@@ -116,8 +116,8 @@
                   <div>
                     <template v-if="scope.row.Type === 'Boolean'">
                       <el-radio-group v-model="scope.row.value" @change="validateItem(scope.row)">
-                        <el-radio value="true">True</el-radio>
-                        <el-radio value="false">False</el-radio>
+                        <el-radio :value="scope.row.BooleanTrue || 'true'">{{ scope.row.BooleanTrue || 'True' }}</el-radio>
+                        <el-radio :value="scope.row.BooleanFalse || 'false'">{{ scope.row.BooleanFalse || 'False' }}</el-radio>
                       </el-radio-group>
                     </template>
                     <template v-else-if="scope.row.Type === 'Timestamp'">

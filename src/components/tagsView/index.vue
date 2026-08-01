@@ -454,8 +454,8 @@ const fullScreen = () => {
                                     <Setting />
                                 </el-icon>
                             </el-tooltip>
-                            <span>车间：<span class="text-[1.1rem] text-[#006487] underline">&nbsp;{{ OPUIData.workShopDec || '-' }}&nbsp;</span></span>
-                            <span>产线：<span class="text-[1.1rem] text-[#006487] underline">&nbsp;{{ OPUIData.lineDec || '-' }}&nbsp;</span></span>
+                            <span>车间：<span class="text-[1.1rem] text-[#006487] underline">&nbsp;{{ OPUIData.workShopDec || OPUIData.workShop || '-' }}&nbsp;</span></span>
+                            <span>产线：<span class="text-[1.1rem] text-[#006487] underline">&nbsp;{{ OPUIData.lineDec || OPUIData.line || '-' }}&nbsp;</span></span>
                         </div>
                         <div class="flex items-center gap-3">
 

@@ -1050,6 +1050,15 @@ export function ContainersOperationMfgOrderQuery() {
 }
 
 
+/** 箱码打印 */
+export function BoxPrinting(data: any) {
+    return request({
+        url: "/api/mfgordercontainer/BoxPrinting",
+        method: "post",
+        data
+    })
+}
+
 /** 完工入库主查询 */
 export function QueryCompletionInboundList(data: any) {
     return request({
@@ -1247,6 +1256,23 @@ export function ContainersOperationContainerDetailQuery(containerName: string) {
         url: "/api/ContainersOperation/ContainerDetailQuery",
         method: "post",
         params: { containerName }
+    })
+}
+
+/** 资源查询（容器操作） */
+export function ContainersOperationResourceQuery() {
+    return request({
+        url: "/api/ContainersOperation/ResourceQuery",
+        method: "post"
+    })
+}
+
+/** 资源明细查询（容器操作） */
+export function ContainersOperationResourceDetailQuery(ResourceName: string) {
+    return request({
+        url: "/api/ContainersOperation/ResourceDetailQuery",
+        method: "post",
+        params: { ResourceName }
     })
 }
 
