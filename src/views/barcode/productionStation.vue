@@ -116,8 +116,8 @@
                   <div>
                     <template v-if="scope.row.Type === 'Boolean'">
                       <el-radio-group v-model="scope.row.value" @change="validateItem(scope.row)">
-                        <el-radio :value="scope.row.BooleanTrue || 'true'">{{ scope.row.BooleanTrue || 'True' }}</el-radio>
-                        <el-radio :value="scope.row.BooleanFalse || 'false'">{{ scope.row.BooleanFalse || 'False' }}</el-radio>
+                        <el-radio value="true">{{ scope.row.BooleanTrue || 'True' }}</el-radio>
+                        <el-radio value="false">{{ scope.row.BooleanFalse || 'False' }}</el-radio>
                       </el-radio-group>
                     </template>
                     <template v-else-if="scope.row.Type === 'Timestamp'">
@@ -620,6 +620,11 @@ const handleScan = async () => {
         })),
       }));
       dataCollectionList.value = [];
+      // 如果没有SN精追数据，自动提交
+      const hasSN = (d.rebornComponentIssueLists || []).some((m: any) => m.TypeName === 'SN');
+      if (!hasSN) {
+        submitComponentIssue();
+      }
     } else {
       dataCollectionList.value = [];
       treeComponentData.value = [];

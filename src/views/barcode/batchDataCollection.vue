@@ -89,40 +89,71 @@
         <!-- 表格容器 - 添加滚动 -->
         <div class="flex-1 p-2 min-h-0 overflow-hidden" v-else>
           <div class="h-full pb-[35px] overflow-auto">
-            <el-table 
-              :data="batchList" 
+            <el-table
+              :data="displayTableData"
               size="small" 
               border 
               style="width:100%"
               max-height="100%"
               height="100%"
             >
-              <el-table-column prop="ContainerName" label="SN码" width="160" fixed="left" show-overflow-tooltip />
-              <el-table-column v-for="(item, idx) in dataCollectionItems" :key="idx" :label="item.DataPointName" min-width="180">
-                <template #header v-if="item.Type === 'Boolean'">
-                  <div class="flex flex-col items-center">
-                    <span>{{ item.DataPointName }}</span>
-                    <div class="flex gap-1">
-                      <el-button size="small" text @click="batchSetBoolean(idx, item.BooleanTrue || true)">{{ item.BooleanTrue || '全True' }}</el-button>
-                      <el-button size="small" text @click="batchSetBoolean(idx, item.BooleanFalse || false)">{{ item.BooleanFalse || '全False' }}</el-button>
-                    </div>
-                  </div>
-                </template>
+              <el-table-column prop="ContainerName" label="SN码" width="160" fixed="left" show-overflow-tooltip>
                 <template #default="scope">
-                  <template v-if="item.Type === 'Boolean'">
+                  <span v-if="scope.row._isBatch" class="font-bold">批量操作</span>
+                  <span v-else>{{ scope.row.ContainerName }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column v-for="(item, idx) in dataCollectionItems" :key="idx" :label="item.DataPointName" min-width="180">
+                <template #default="scope">
+                  <template v-if="scope.row._isBatch && item.Type === 'Boolean'">
+                    <div class="flex justify-center gap-1">
+                      <el-button size="small" @click="batchSetBoolean(idx, 'true')">{{ item.BooleanTrue || 'True' }}</el-button>
+                      <el-button size="small" type="danger" @click="batchSetBoolean(idx, 'false')">{{ item.BooleanFalse || 'False' }}</el-button>
+                    </div>
+                  </template>
+                  <template v-else-if="item.Type === 'Boolean'">
                     <el-radio-group v-model="scope.row.values[idx]" size="small">
-                      <el-radio :value="item.BooleanTrue || true">{{ item.BooleanTrue || 'True' }}</el-radio>
-                      <el-radio :value="item.BooleanFalse || false">{{ item.BooleanFalse || 'False' }}</el-radio>
+                      <el-radio value="true">{{ item.BooleanTrue || 'True' }}</el-radio>
+                      <el-radio value="false">{{ item.BooleanFalse || 'False' }}</el-radio>
                     </el-radio-group>
                   </template>
-                  <template v-else>
-                    <el-input v-model="scope.row.values[idx]" size="small" :placeholder="item.DataPointName" />
+                  <template v-else-if="!scope.row._isBatch && item.Type === 'Integer'">
+                    <div>
+                      <el-input v-model="scope.row.values[idx]" size="small" :placeholder="item.DataPointName"
+                        :class="{ 'is-error': scope.row._errors?.[idx]?.error }"
+                        @input="(val: any) => { scope.row.values[idx] = String(val).replace(/[^0-9-]/g, ''); validateCell(scope.row, idx); }"
+                        @blur="validateCell(scope.row, idx)" />
+                      <div v-if="scope.row._errors?.[idx]?.error" class="text-red-500 text-xs mt-0.5">
+                        {{ scope.row._errors[idx].msg }}
+                      </div>
+                    </div>
+                  </template>
+                  <template v-else-if="!scope.row._isBatch && item.Type === 'Float'">
+                    <div>
+                      <el-input v-model="scope.row.values[idx]" size="small" :placeholder="item.DataPointName"
+                        :class="{ 'is-error': scope.row._errors?.[idx]?.error }"
+                        @input="(val: any) => { scope.row.values[idx] = String(val).replace(/[^0-9.-]/g, ''); validateCell(scope.row, idx); }"
+                        @blur="validateCell(scope.row, idx)" />
+                      <div v-if="scope.row._errors?.[idx]?.error" class="text-red-500 text-xs mt-0.5">
+                        {{ scope.row._errors[idx].msg }}
+                      </div>
+                    </div>
+                  </template>
+                  <template v-else-if="!scope.row._isBatch">
+                    <div>
+                      <el-input v-model="scope.row.values[idx]" size="small" :placeholder="item.DataPointName"
+                        :class="{ 'is-error': scope.row._errors?.[idx]?.error }"
+                        @blur="validateCell(scope.row, idx)" />
+                      <div v-if="scope.row._errors?.[idx]?.error" class="text-red-500 text-xs mt-0.5">
+                        {{ scope.row._errors[idx].msg }}
+                      </div>
+                    </div>
                   </template>
                 </template>
               </el-table-column>
               <el-table-column label="查看历史" width="90" fixed="right" align="center">
                 <template #default="scope">
-                  <el-button type="primary" size="small" @click="openHistory(scope.row)">查看</el-button>
+                  <el-button v-if="!scope.row._isBatch" type="primary" size="small" @click="openHistory(scope.row)">查看</el-button>
                 </template>
               </el-table-column>
             </el-table>
@@ -158,7 +189,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import { ContainersOperationMfgOrderQuery, ContainersOperationMfgOrderDetailQuery, ContainersOperationContainerDetailQuery, ContainersOperationResourceQuery, ContainersOperationResourceDetailQuery, ContainersOperationContainerOperationExecution } from "@/api/operate";
@@ -195,8 +226,36 @@ const lastKeyFields = ref<any>({});
 const batchSetBoolean = (idx: number, value: any) => {
   batchList.value.forEach((row: any) => {
     row.values[idx] = value;
+    row._errors[idx] = { error: false, msg: '' };
   });
 };
+
+const validateCell = (row: any, idx: number) => {
+  const item = dataCollectionItems.value[idx];
+  const val = row.values[idx];
+  row._errors[idx] = { error: false, msg: '' };
+  if (item.IsRequired && (!val || String(val).trim() === '')) {
+    row._errors[idx] = { error: true, msg: `${item.DataPointName} 为必填项` };
+    return;
+  }
+  if (val && !isNaN(Number(val)) && (item.LowerLimit || item.UpperLimit)) {
+    const num = Number(val);
+    if (item.LowerLimit && num < Number(item.LowerLimit)) {
+      row._errors[idx] = { error: true, msg: `不能小于 ${item.LowerLimit}` };
+    }
+    if (item.UpperLimit && num > Number(item.UpperLimit)) {
+      row._errors[idx] = { error: true, msg: `不能大于 ${item.UpperLimit}` };
+    }
+  }
+};
+
+const displayTableData = computed(() => {
+  if (batchList.value.length === 0) return [];
+  const hasBool = dataCollectionItems.value.some((item: any) => item.Type === 'Boolean');
+  if (!hasBool) return batchList.value;
+  const batchRow: any = { _isBatch: true, ContainerName: '批量操作', values: [], SpecHistoryList: [] };
+  return [batchRow, ...batchList.value];
+});
 
 // 历史数据弹窗
 const historyDialogVisible = ref(false);
@@ -243,6 +302,7 @@ const handleQuery = async () => {
     const newBatches = (d.BatchList || []).map((b: any) => ({
       ...b,
       values: newItems.map(() => ''),
+      _errors: newItems.map(() => ({ error: false, msg: '' })),
     }));
 
     info.value = {
@@ -285,12 +345,12 @@ const handleSubmit = async () => {
     ElMessage.warning('请先查询数据');
     return;
   }
-  // 校验必填项
+  // 校验必填项 + 范围
   for (const b of batchList.value) {
     for (let i = 0; i < dataCollectionItems.value.length; i++) {
-      const item = dataCollectionItems.value[i];
-      if (item.IsRequired && (!b.values[i] || String(b.values[i]).trim() === '')) {
-        ElMessage.warning(`SN码 ${b.ContainerName} 的「${item.DataPointName}」为必填项`);
+      validateCell(b, i);
+      if (b._errors[i].error) {
+        ElMessage.warning(`SN码 ${b.ContainerName} 的「${dataCollectionItems.value[i].DataPointName}」${b._errors[i].msg}`);
         return;
       }
     }
