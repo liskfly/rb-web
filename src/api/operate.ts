@@ -1250,6 +1250,24 @@ export function ContainersOperationMfgOrderDetailQuery(MfgOrderName: string) {
     })
 }
 
+/** 根据工单查询可选工序（容器操作） */
+export function ContainersOperationMfgOrderCollectionSpecQuery(MfgOrderName: string) {
+    return request({
+        url: "/api/ContainersOperation/MfgOrderCollectionSpecQuery",
+        method: "post",
+        params: { MfgOrderName }
+    })
+}
+
+/** 根据工单和工序查询数据采集项及批次（容器操作） */
+export function ContainersOperationMfgOrderCollectionDetailQuery(MfgOrderName: string, SpecName: string) {
+    return request({
+        url: "/api/ContainersOperation/MfgOrderCollectionDetailQuery",
+        method: "post",
+        params: { MfgOrderName, SpecName }
+    })
+}
+
 /** 根据条码查询批次信息及历史采集数据（容器操作） */
 export function ContainersOperationContainerDetailQuery(containerName: string) {
     return request({
@@ -1283,4 +1301,228 @@ export function ContainersOperationContainerOperationExecution(data: any) {
         method: "post",
         data
     })
+}
+
+/** 查询检验类别列表 */
+export function QueryInspectionCategoryList(data: any) {
+    return request({
+        url: "/api/Inspection/QueryInspectionCategoryList",
+        method: "post",
+        data
+    })
+}
+
+/** 新增检验类别 */
+export function InsertInspectionCategory(data: any) {
+    return request({
+        url: "/api/Inspection/InsertInspectionCategory",
+        method: "post",
+        data
+    })
+}
+
+/** 修改检验类别 */
+export function UpdateInspectionCategory(data: any) {
+    return request({
+        url: "/api/Inspection/UpdateInspectionCategory",
+        method: "post",
+        data
+    })
+}
+
+/** 查询所有单位 */
+export function QueryUomList() {
+    return request({
+        url: "/api/Inspection/QueryUomList",
+        method: "post"
+    })
+}
+
+/** 查询检验项目列表 */
+export function QueryInspectionItemList(data: any) {
+    return request({
+        url: "/api/Inspection/QueryInspectionItemList",
+        method: "post",
+        data
+    })
+}
+
+/** 新增检验项目 */
+export function InsertInspectionItem(data: any) {
+    return request({
+        url: "/api/Inspection/InsertInspectionItem",
+        method: "post",
+        data
+    })
+}
+
+/** 修改检验项目 */
+export function UpdateInspectionItem(data: any) {
+    return request({
+        url: "/api/Inspection/UpdateInspectionItem",
+        method: "post",
+        data
+    })
+}
+
+/** 查询所有检验类型(下拉) */
+export function QueryInspectionCategoryDownList() {
+    return request({
+        url: "/api/Inspection/QueryInspectionCategoryDownList",
+        method: "post"
+    })
+}
+
+/** 查询所有产品型号(下拉) */
+export function QueryProductFamilyDownList() {
+    return request({
+        url: "/api/Inspection/QueryProductFamilyDownList",
+        method: "post"
+    })
+}
+
+/** 查询所有产品(下拉) */
+export function QueryProductDownList() {
+    return request({
+        url: "/api/Inspection/QueryProductDownList",
+        method: "post"
+    })
+}
+
+/** 查询检验方案列表 */
+export function QueryInspectionPlanList(data: any) {
+    return request({
+        url: "/api/Inspection/QueryInspectionPlanList",
+        method: "post",
+        data
+    })
+}
+
+/** 新增检验方案 */
+export function InsertInspectionPlan(data: any) {
+    return request({
+        url: "/api/Inspection/InsertInspectionPlan",
+        method: "post",
+        data
+    })
+}
+
+/** 修改检验方案 */
+export function UpdateInspectionPlan(data: any) {
+    return request({
+        url: "/api/Inspection/UpdateInspectionPlan",
+        method: "post",
+        data
+    })
+}
+
+/** 根据ID查询检验方案详情（包含明细） */
+export function GetInspectionPlanById(id: number) {
+    return request({
+        url: "/api/Inspection/GetInspectionPlanById",
+        method: "post",
+        params: { id }
+    })
+}
+
+/** 查询所有工序(下拉) */
+export function QuerySpecNameDownList() {
+    return request({
+        url: "/api/Inspection/QuerySpecNameDownList",
+        method: "post"
+    })
+}
+
+/** 查询判定类型(下拉) */
+export function QueryJudgeTypeDownList() {
+    return request({
+        url: "/api/Inspection/QueryJudgeTypeDownList",
+        method: "post"
+    })
+}
+
+/** 查询所有检验项目(下拉) */
+export function QueryInspectionItemDownList() {
+    return request({
+        url: "/api/Inspection/QueryInspectionItemDownList",
+        method: "post"
+    })
+}
+
+// 工单追溯报表：查询条件下拉
+export function ReBornProductQuery() {
+  return request({ url: "/api/ReBornReport/ProductQuery", method: "post" });
+}
+
+export function ReBornInvAddCodeQuery() {
+  return request({ url: "/api/ReBornReport/InvAddCodeQuery", method: "post" });
+}
+
+export function ReBornProductTypeQuery() {
+  return request({ url: "/api/ReBornReport/ProductTypeQuery", method: "post" });
+}
+
+export function ReBornProductFamilyQuery() {
+  return request({ url: "/api/ReBornReport/ProductFamilyQuery", method: "post" });
+}
+
+export function ReBornWorkflowQuery() {
+  return request({ url: "/api/ReBornReport/WorkflowQuery", method: "post" });
+}
+
+export function ReBornOrderTypeQuery() {
+  return request({ url: "/api/ReBornReport/OrderTypeQuery", method: "post" });
+}
+
+export function ReBornOrderStatusQuery() {
+  return request({ url: "/api/ReBornReport/OrderStatusQuery", method: "post" });
+}
+
+export function ReBornWorkCenterQuery() {
+  return request({ url: "/api/ReBornReport/WorkCenterQuery", method: "post" });
+}
+
+export function ReBornMfgLineQuery(data: any = {}) {
+  return request({ url: "/api/ReBornReport/MfgLineQuery", method: "post", data });
+}
+
+// 工单追溯报表：主查询及逐级明细
+export function MfgOrderReportQuery(data: any) {
+  return request({ url: "/api/ReBornReport/MfgOrderReportQuery", method: "post", data });
+}
+
+export function MfgOrderContainerQuery(data: any) {
+  return request({ url: "/api/ReBornReport/MfgOrderContainerQuery", method: "post", data });
+}
+
+export function MfgOrderBomQuery(data: any) {
+  return request({ url: "/api/ReBornReport/MfgOrderBomQuery", method: "post", data });
+}
+
+export function MfgOrderPickingQuery(data: any) {
+  return request({ url: "/api/ReBornReport/MfgOrderPickingQuery", method: "post", data });
+}
+
+export function MfgOrderConfirmQuery(data: any) {
+  return request({ url: "/api/ReBornReport/MfgOrderConfirmQuery", method: "post", data });
+}
+
+export function MfgOrderCompletionQuery(data: any) {
+  return request({ url: "/api/ReBornReport/MfgOrderCompletionQuery", method: "post", data });
+}
+
+export function MfgOrderMoveHistoryQuery(data: any) {
+  return request({ url: "/api/ReBornReport/MfgOrderMoveHistoryQuery", method: "post", data });
+}
+
+export function MfgOrderInspectionQuery(data: any) {
+  return request({ url: "/api/ReBornReport/MfgOrderInspectionQuery", method: "post", data });
+}
+
+export function MfgOrderConsumeHeaderQuery(data: any) {
+  return request({ url: "/api/ReBornReport/MfgOrderConsumeHeaderQuery", method: "post", data });
+}
+
+export function MfgOrderConsumeDetailQuery(data: any) {
+  return request({ url: "/api/ReBornReport/MfgOrderConsumeDetailQuery", method: "post", data });
 }

@@ -7,28 +7,66 @@
 
     <div class="flex flex-col flex-1 min-h-0 p-2 gap-2">
       <!-- ====== 进站模块 ====== -->
-      <div class="bg-white rounded shadow-sm flex items-center gap-3 px-3 py-2 flex-shrink-0">
-        <div class="flex items-center gap-3">
-          <el-radio v-model="entryMode" value="sn" @change="handleRadioChange">批量SN进站</el-radio>
+      <div class="bg-white rounded shadow-sm flex flex-wrap items-center gap-3 px-3 py-2 flex-shrink-0">
+        <div class="flex items-center">
+          <el-radio v-model="entryMode" value="sn" class="m-2" @change="handleRadioChange">批量SN进站</el-radio>
           <el-input v-model="snInput" placeholder="请输入SN" size="large" clearable style="width: 180px"
             @keyup.enter="snInput && handleQuery()" />
         </div>
         <div class="flex items-center gap-3">
-          <el-radio v-model="entryMode" value="order" @change="handleRadioChange">工单进站</el-radio>
+          <el-radio v-model="entryMode" value="order" class="m-2" @change="handleRadioChange">工单进站</el-radio>
           <el-select v-model="mfgOrder" placeholder="请选择工单" size="large" clearable filterable style="width: 240px"
             @change="mfgOrder && handleQuery()">
             <el-option v-for="item in mfgOrderOptions" :key="item.MfgOrderName" :label="item.MfgOrderName" :value="item.MfgOrderName" />
           </el-select>
         </div>
         <div class="flex items-center gap-3">
-          <el-radio v-model="entryMode" value="resource" @change="handleRadioChange">设备进站</el-radio>
+          <el-radio v-model="entryMode" value="resource" class="m-2" @change="handleRadioChange">设备进站</el-radio>
           <el-select v-model="resourceName" placeholder="请选择设备" size="large" clearable filterable style="width: 240px"
             @change="resourceName && handleQuery()">
             <el-option v-for="item in resourceOptions" :key="item.ResourceName" :label="item.ResourceName" :value="item.ResourceName" />
           </el-select>
         </div>
-        <el-button type="primary" size="large" @click="handleSubmit">提交</el-button>
-        <el-button size="large" @click="router.push('/dipWork/productionStation')">生产过站</el-button>
+        <div class="flex items-center gap-3">
+          <el-radio v-model="entryMode" value="orderSpec" class="m-2" @change="handleRadioChange">工单工序进站</el-radio>
+          <el-select
+            v-model="collectionMfgOrder"
+            placeholder="请选择工单"
+            size="large"
+            clearable
+            filterable
+            style="width: 220px"
+            @change="handleCollectionOrderChange"
+          >
+            <el-option
+              v-for="item in mfgOrderOptions"
+              :key="item.MfgOrderName"
+              :label="item.MfgOrderName"
+              :value="item.MfgOrderName"
+            />
+          </el-select>
+          <el-select
+            v-model="collectionSpecName"
+            placeholder="请选择工序"
+            size="large"
+            clearable
+            filterable
+            :disabled="!collectionMfgOrder"
+            style="width: 180px"
+            @change="handleCollectionSpecChange"
+          >
+            <el-option
+              v-for="item in collectionSpecOptions"
+              :key="`${item.WorkflowName}-${item.WorkflowRevision}-${item.Sequence}-${item.SpecName}`"
+              :label="item.SpecName"
+              :value="item.SpecName"
+            />
+          </el-select>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <el-button type="primary" size="large" @click="handleSubmit">提交</el-button>
+          <el-button size="large" @click="router.push('/dipWork/productionStation')">生产过站</el-button>
+        </div>
       </div>
 
       <!-- ====== 工单信息 ====== -->
@@ -107,14 +145,14 @@
                 <template #default="scope">
                   <template v-if="scope.row._isBatch && item.Type === 'Boolean'">
                     <div class="flex justify-center gap-1">
-                      <el-button size="small" @click="batchSetBoolean(idx, 'true')">{{ item.BooleanTrue || 'True' }}</el-button>
-                      <el-button size="small" type="danger" @click="batchSetBoolean(idx, 'false')">{{ item.BooleanFalse || 'False' }}</el-button>
+                      <el-button size="small" @click="batchSetBoolean(idx, 'true')">{{ item.BooleanTrue || '合格' }}</el-button>
+                      <el-button size="small" type="danger" @click="batchSetBoolean(idx, 'false')">{{ item.BooleanFalse || '不合格' }}</el-button>
                     </div>
                   </template>
                   <template v-else-if="item.Type === 'Boolean'">
                     <el-radio-group v-model="scope.row.values[idx]" size="small">
-                      <el-radio value="true">{{ item.BooleanTrue || 'True' }}</el-radio>
-                      <el-radio value="false">{{ item.BooleanFalse || 'False' }}</el-radio>
+                      <el-radio value="true">{{ item.BooleanTrue || '合格' }}</el-radio>
+                      <el-radio value="false">{{ item.BooleanFalse || '不合格' }}</el-radio>
                     </el-radio-group>
                   </template>
                   <template v-else-if="!scope.row._isBatch && item.Type === 'Integer'">
@@ -191,8 +229,17 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
-import { ElMessage } from "element-plus";
-import { ContainersOperationMfgOrderQuery, ContainersOperationMfgOrderDetailQuery, ContainersOperationContainerDetailQuery, ContainersOperationResourceQuery, ContainersOperationResourceDetailQuery, ContainersOperationContainerOperationExecution } from "@/api/operate";
+import { ElMessage, ElMessageBox } from "element-plus";
+import {
+  ContainersOperationMfgOrderQuery,
+  ContainersOperationMfgOrderDetailQuery,
+  ContainersOperationMfgOrderCollectionSpecQuery,
+  ContainersOperationMfgOrderCollectionDetailQuery,
+  ContainersOperationContainerDetailQuery,
+  ContainersOperationResourceQuery,
+  ContainersOperationResourceDetailQuery,
+  ContainersOperationContainerOperationExecution,
+} from "@/api/operate";
 import { useUserStoreWithOut } from '@/stores/modules/user';
 
 const router = useRouter();
@@ -204,6 +251,8 @@ const handleRadioChange = () => {
     handleQuery();
   } else if (entryMode.value === 'order' && mfgOrder.value) {
     handleQuery();
+  } else if (entryMode.value === 'orderSpec' && collectionMfgOrder.value && collectionSpecName.value) {
+    handleQuery();
   } else if (entryMode.value === 'resource' && resourceName.value) {
     handleQuery();
   }
@@ -211,8 +260,33 @@ const handleRadioChange = () => {
 const snInput = ref("");
 const mfgOrder = ref("");
 const mfgOrderOptions = ref<any[]>([]);
+const collectionMfgOrder = ref("");
+const collectionSpecName = ref("");
+const collectionSpecOptions = ref<any[]>([]);
 const resourceName = ref("");
 const resourceOptions = ref<any[]>([]);
+
+const handleCollectionOrderChange = async (value: string) => {
+  entryMode.value = 'orderSpec';
+  collectionSpecName.value = '';
+  collectionSpecOptions.value = [];
+  if (!value) return;
+
+  const res: any = await ContainersOperationMfgOrderCollectionSpecQuery(value);
+  if (res && res.success && res.code === 0) {
+    collectionSpecOptions.value = [...(res.content || [])].sort(
+      (a: any, b: any) => Number(a.Sequence || 0) - Number(b.Sequence || 0),
+    );
+  } else {
+    ElMessage.error((res && res.msg) || '工序查询失败');
+  }
+};
+
+const handleCollectionSpecChange = (value: string) => {
+  if (!value || !collectionMfgOrder.value) return;
+  entryMode.value = 'orderSpec';
+  handleQuery();
+};
 
 const info = ref({
   MfgOrderName: "", OrderStatusName: "", PlannedQuantity: null as number | null,
@@ -226,25 +300,25 @@ const lastKeyFields = ref<any>({});
 const batchSetBoolean = (idx: number, value: any) => {
   batchList.value.forEach((row: any) => {
     row.values[idx] = value;
-    row._errors[idx] = { error: false, msg: '' };
+    row._errors[idx] = { error: false, type: '', msg: '' };
   });
 };
 
 const validateCell = (row: any, idx: number) => {
   const item = dataCollectionItems.value[idx];
   const val = row.values[idx];
-  row._errors[idx] = { error: false, msg: '' };
+  row._errors[idx] = { error: false, type: '', msg: '' };
   if (item.IsRequired && (!val || String(val).trim() === '')) {
-    row._errors[idx] = { error: true, msg: `${item.DataPointName} 为必填项` };
+    row._errors[idx] = { error: true, type: 'required', msg: `${item.DataPointName} 为必填项` };
     return;
   }
   if (val && !isNaN(Number(val)) && (item.LowerLimit || item.UpperLimit)) {
     const num = Number(val);
     if (item.LowerLimit && num < Number(item.LowerLimit)) {
-      row._errors[idx] = { error: true, msg: `不能小于 ${item.LowerLimit}` };
+      row._errors[idx] = { error: true, type: 'range', msg: `不能小于 ${item.LowerLimit}` };
     }
     if (item.UpperLimit && num > Number(item.UpperLimit)) {
-      row._errors[idx] = { error: true, msg: `不能大于 ${item.UpperLimit}` };
+      row._errors[idx] = { error: true, type: 'range', msg: `不能大于 ${item.UpperLimit}` };
     }
   }
 };
@@ -291,6 +365,13 @@ const handleQuery = async () => {
   } else if (entryMode.value === 'order') {
     if (!mfgOrder.value) { ElMessage.warning('请选择工单'); return; }
     res = await ContainersOperationMfgOrderDetailQuery(mfgOrder.value);
+  } else if (entryMode.value === 'orderSpec') {
+    if (!collectionMfgOrder.value) { ElMessage.warning('请选择工单'); return; }
+    if (!collectionSpecName.value) { ElMessage.warning('请选择工序'); return; }
+    res = await ContainersOperationMfgOrderCollectionDetailQuery(
+      collectionMfgOrder.value,
+      collectionSpecName.value,
+    );
   } else {
     if (!resourceName.value) { ElMessage.warning('请选择设备'); return; }
     res = await ContainersOperationResourceDetailQuery(resourceName.value);
@@ -314,8 +395,8 @@ const handleQuery = async () => {
     };
     dataCollectionItems.value = newItems;
 
-    if (entryMode.value === 'order' || entryMode.value === 'resource') {
-      // 工单/设备模式：直接覆盖
+    if (entryMode.value === 'order' || entryMode.value === 'orderSpec' || entryMode.value === 'resource') {
+      // 工单/指定工序/设备模式：直接覆盖
       batchList.value = newBatches;
     } else {
       // SN模式：检查关键字段
@@ -346,13 +427,40 @@ const handleSubmit = async () => {
     return;
   }
   // 校验必填项 + 范围
+  let hasRequiredError = false;
+  const rangeErrors: string[] = [];
   for (const b of batchList.value) {
     for (let i = 0; i < dataCollectionItems.value.length; i++) {
       validateCell(b, i);
       if (b._errors[i].error) {
-        ElMessage.warning(`SN码 ${b.ContainerName} 的「${dataCollectionItems.value[i].DataPointName}」${b._errors[i].msg}`);
-        return;
+        if (b._errors[i].type === 'required') {
+          hasRequiredError = true;
+        } else {
+          const item = dataCollectionItems.value[i];
+          rangeErrors.push(`SN码 ${b.ContainerName} 的「${item.DataPointName}」超出范围（<span style="color:#f56c6c">${item.LowerLimit || '-'} ~ ${item.UpperLimit || '-'}</span>），当前值：<span style="color:#79bbff">${b.values[i]}</span>`);
+        }
       }
+    }
+  }
+  if (hasRequiredError) {
+    ElMessage.warning("存在必填项未填写，请检查红色提示");
+    return;
+  }
+  if (rangeErrors.length > 0) {
+    try {
+      await ElMessageBox.confirm(
+        `以下数据采集项数值超出范围：<br/>${rangeErrors.join('<br/>')}`,
+        "提示",
+        {
+          confirmButtonText: "继续提交",
+          cancelButtonText: "取消",
+          type: "warning",
+          dangerouslyUseHTMLString: true,
+          customClass: "range-confirm-box",
+        }
+      );
+    } catch {
+      return;
     }
   }
   const params = {
@@ -360,6 +468,8 @@ const handleSubmit = async () => {
     TaskListName: lastKeyFields.value.TaskListName || '',
     DataCollectionDefId: lastKeyFields.value.DataCollectionDefId || '',
     DataCollectionDefName: lastKeyFields.value.DataCollectionDefName || '',
+    ServiceName: lastKeyFields.value.ServiceName || '',
+    ResourceName: lastKeyFields.value.ResourceName || '',
     reBornContainerOperations: batchList.value.map((b: any) => ({
       ContainerName: b.ContainerName,
       operationEntityDataCollectionLists: dataCollectionItems.value.map((item: any, idx: number) => ({
@@ -368,7 +478,7 @@ const handleSubmit = async () => {
         DataValue: String(b.values[idx] ?? ''),
       })),
     })),
-    Operator: userStore.getUserInfo,
+    OperatorBy: userStore.getUserInfo,
   };
   const res: any = await ContainersOperationContainerOperationExecution(params);
   if (res && res.success && res.code === 0) {
@@ -395,3 +505,10 @@ onMounted(async () => {
   }
 });
 </script>
+
+<style>
+/* ElMessageBox 挂载在 body 下，不能用 scoped */
+.range-confirm-box {
+  max-width: 600px;
+}
+</style>

@@ -709,7 +709,7 @@ const handleCurrentChange = (val: number) => {
 };
 
 const updateTableHeight = () => {
-  tableHeight.value = window.innerHeight - 220;
+  tableHeight.value = window.innerHeight - 255;
 };
 
 onMounted(() => {

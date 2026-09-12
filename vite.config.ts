@@ -33,27 +33,27 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/controlApi/, '') 
       },
       '/smtApi': {
-        target: 'http://192.168.9.50:12026',
+        target: 'http://192.168.1.42:12024',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/smtApi/, '') 
       },
       '/dipApi': {
-        target: 'http://192.168.9.50:12022',
+        target: 'http://192.168.1.42:12024',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/dipApi/, '') 
       },
       '/scrApi': {
-        target: 'http://192.168.9.50:12025',
+        target: 'http://192.168.1.42:12024',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/scrApi/, '') 
       },
       '/asyApi': {
-        target: 'http://192.168.9.50:12021',
+        target: 'http://192.168.1.42:12024',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/asyApi/, '') 
       },
      '/reportApi': {
-      target: 'http://192.168.9.50:12014',
+      target: 'http://192.168.1.42:12024',
       changeOrigin: true,
       rewrite: (path) => path.replace(/^\/reportApi/, '') 
     },

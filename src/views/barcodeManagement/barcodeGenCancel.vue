@@ -80,6 +80,11 @@
               <el-input v-model="form.planEndTime" readonly />
             </el-form-item>
           </el-col>
+          <el-col :span="6">
+            <el-form-item label="存货代码" style="width: 100%">
+              <el-input v-model="form.invAddCode" readonly />
+            </el-form-item>
+          </el-col>
         </el-row>
 
         <el-row :gutter="16" class="mt-1">
@@ -233,11 +238,14 @@ import {
 
 // 导入新接口
 import { ReprintMfgOrderList, ReprintContainerList } from "@/api/operate";
+import { useUserStoreWithOut } from '@/stores/modules/user';
+
+const userStore = useUserStoreWithOut();
 
 const form = ref({
   orderNo: "", orderDesc: "", workshop: "", productCode: "", productDesc: "",
   orderQty: "", generatedQty: "", orderStatus: "", planStartTime: "", planEndTime: "",
-  generateQty: 0, printer: "",
+  invAddCode: "", generateQty: 0, printer: "",
 });
 
 const orderOptions = ref<{ value: string; label: string }[]>([]);
@@ -345,7 +353,7 @@ const handleSearchAndAddToLeftTable = async () => {
 
 const handleOrderChange = async (val: string) => {
   if (!val) {
-    form.value = { ...form.value, orderNo: "", orderDesc: "", workshop: "", productCode: "", productDesc: "", orderQty: "", generatedQty: "", orderStatus: "", planStartTime: "", planEndTime: "", generateQty: 0 };
+    form.value = { ...form.value, orderNo: "", orderDesc: "", workshop: "", productCode: "", productDesc: "", orderQty: "", generatedQty: "", orderStatus: "", planStartTime: "", planEndTime: "", invAddCode: "", generateQty: 0 };
     leftTableData.value = [];
     rightTableData.value = [];
     return;
@@ -365,6 +373,7 @@ const handleOrderChange = async (val: string) => {
       orderStatus: item.OrderStatusName ?? "",
       planStartTime: item.PlannedStartDate ?? "",
       planEndTime: item.PlannedCompletionDate ?? "",
+      invAddCode: item.InvAddCode ?? "",
       generateQty: item.ProducedQty ?? 0,
     };
   }
@@ -401,6 +410,7 @@ const handleGenerate = async () => {
     MfgOrderName: form.value.orderNo,
     ProducedQty: form.value.generateQty,
     PrinterName: form.value.printer,
+    OperatorBy: userStore.getUserInfo,
   });
   if (res.success && res.code === 0) {
     const barcodes: string[] = res.content || [];

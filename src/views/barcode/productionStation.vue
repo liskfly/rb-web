@@ -116,8 +116,8 @@
                   <div>
                     <template v-if="scope.row.Type === 'Boolean'">
                       <el-radio-group v-model="scope.row.value" @change="validateItem(scope.row)">
-                        <el-radio value="true">{{ scope.row.BooleanTrue || 'True' }}</el-radio>
-                        <el-radio value="false">{{ scope.row.BooleanFalse || 'False' }}</el-radio>
+                        <el-radio value="true">{{ scope.row.BooleanTrue || '合格' }}</el-radio>
+                        <el-radio value="false">{{ scope.row.BooleanFalse || '不合格' }}</el-radio>
                       </el-radio-group>
                     </template>
                     <template v-else-if="scope.row.Type === 'Timestamp'">
@@ -434,8 +434,10 @@ const handleSnBarcodeInput = async (row: any) => {
 };
 
 const submitComponentIssue = async () => {
-  if (pendingFeedingData.value.length <= 0) {
-    ElMessage.warning("请先完成待上料操作");
+  // 精追有内容且未全部扫码时卡控
+  const unscanned = snData.value.filter((row) => !row.scannedSN);
+  if (unscanned.length > 0) {
+    ElMessage.warning("请先完成SN精追条码扫描");
     return;
   }
 
@@ -463,6 +465,7 @@ const submitComponentIssue = async () => {
     DataCollectionDefId: "", DataCollectionDefName: "", ResourceName: info.value.ResourceName || "",
     operationEntityComponentIssueLists: [...lotItems, ...snItems],
     operationEntityDataCollectionLists: [],
+    OperatorBy: userStore.getUserInfo,
   };
   const res: any = await ContainerOperationExecution(params);
   if (res.success && res.code === 0) {
@@ -475,11 +478,6 @@ const submitComponentIssue = async () => {
 };
 
 const submitMoveIn = async () => {
-  if (pendingFeedingData.value.length <= 0) {
-    ElMessage.warning("请先完成待上料操作");
-    return;
-  }
-
   if (!moveInResource.value) {
     ElMessageBox.alert("请选择设备", "提示", {
       confirmButtonText: "确定", type: "warning",
@@ -491,6 +489,7 @@ const submitMoveIn = async () => {
     TaskListName: info.value.TaskListName, ServiceName: "MoveIn",
     DataCollectionDefId: "", DataCollectionDefName: "", ResourceName: moveInResource.value,
     operationEntityComponentIssueLists: [], operationEntityDataCollectionLists: [],
+    OperatorBy: userStore.getUserInfo,
   };
   const res: any = await ContainerOperationExecution(params);
   if (res.success && res.code === 0) {
@@ -503,16 +502,12 @@ const submitMoveIn = async () => {
 };
 
 const submitMoveStd = async () => {
-  if (pendingFeedingData.value.length <= 0) {
-    ElMessage.warning("请先完成待上料操作");
-    return false;
-  }
-
   const params = {
     ContainerName: info.value.ContainerName, TaskName: info.value.TaskName || "",
     TaskListName: info.value.TaskListName, ServiceName: "MoveStd",
     DataCollectionDefId: "", DataCollectionDefName: "", ResourceName: info.value.ResourceName || "",
     operationEntityComponentIssueLists: [], operationEntityDataCollectionLists: [],
+    OperatorBy: userStore.getUserInfo,
   };
   const res: any = await ContainerOperationExecution(params);
   if (res.success && res.code === 0) {
@@ -527,15 +522,18 @@ const submitMoveStd = async () => {
 const validateItem = (item: any) => {
   item._error = false;
   item._errorMsg = "";
+  item._errorType = "";
   if (item.Type === 'Boolean' || item.Type === 'Timestamp') {
     if (item.IsRequired && (item.value === "" || item.value === undefined || item.value === null)) {
       item._error = true;
+      item._errorType = 'required';
       item._errorMsg = `${item.DataPointName} 为必填项`;
     }
     return;
   }
   if (item.IsRequired && (!item.value || String(item.value).trim() === '')) {
     item._error = true;
+    item._errorType = 'required';
     item._errorMsg = `${item.DataPointName} 为必填项`;
     return;
   }
@@ -543,11 +541,13 @@ const validateItem = (item: any) => {
     const num = Number(item.value);
     if (item.LowerLimit !== "" && item.LowerLimit !== null && item.LowerLimit !== undefined && num < Number(item.LowerLimit)) {
       item._error = true;
+      item._errorType = 'range';
       item._errorMsg = `${item.DataPointName} 不能小于 ${item.LowerLimit}`;
       return;
     }
     if (item.UpperLimit !== "" && item.UpperLimit !== null && item.UpperLimit !== undefined && num > Number(item.UpperLimit)) {
       item._error = true;
+      item._errorType = 'range';
       item._errorMsg = `${item.DataPointName} 不能大于 ${item.UpperLimit}`;
       return;
     }
@@ -556,6 +556,15 @@ const validateItem = (item: any) => {
 
 const handleScan = async () => {
   if (!barcode.value) return;
+  // 每次扫码前从 OPUIData 读取最新车间产线（TagsView 弹窗可能已改）
+  const opuiData = localStorage.getItem("OPUIData");
+  if (opuiData) {
+    try {
+      const data = JSON.parse(opuiData);
+      if (data.workShop) selectedWorkCenter.value = data.workShop;
+      if (data.line) selectedMfgLine.value = data.line;
+    } catch {}
+  }
   if (!selectedWorkCenter.value) {
     ElMessageBox.alert("请先选择车间", "提示", {
       confirmButtonText: "确定", type: "warning",
@@ -640,18 +649,39 @@ const handleScan = async () => {
 };
 
 const submitDataCollection = async () => {
-  if (pendingFeedingData.value.length <= 0) {
-    ElMessage.warning("请先完成待上料操作");
-    return;
-  }
-
-  let hasError = false;
-  dataCollectionList.value.forEach((item) => { validateItem(item); if (item._error) hasError = true; });
-  if (hasError) {
+  let hasRequiredError = false;
+  const rangeErrors: string[] = [];
+  dataCollectionList.value.forEach((item) => {
+    validateItem(item);
+    if (item._error) {
+      if (item._errorType === 'required') {
+        hasRequiredError = true;
+      } else {
+        rangeErrors.push(`「${item.DataPointName}」超出范围（<span style="color:#f56c6c">${item.LowerLimit || '-'} ~ ${item.UpperLimit || '-'}</span>），当前值：<span style="color:#79bbff">${item.value}</span>`);
+      }
+    }
+  });
+  if (hasRequiredError) {
     ElMessageBox.alert("请检查数据采集项中的错误提示", "提示", {
       confirmButtonText: "确定", type: "warning",
     });
     return;
+  }
+  if (rangeErrors.length > 0) {
+    try {
+      await ElMessageBox.confirm(
+        `以下数据采集项数值超出范围：<br/>${rangeErrors.join('<br/>')}`,
+        "提示",
+        {
+          confirmButtonText: "继续提交",
+          cancelButtonText: "取消",
+          type: "warning",
+          dangerouslyUseHTMLString: true,
+        }
+      );
+    } catch {
+      return;
+    }
   }
   const params = {
     ContainerName: info.value.ContainerName, TaskName: info.value.TaskName, TaskListName: info.value.TaskListName,
@@ -661,6 +691,7 @@ const submitDataCollection = async () => {
     operationEntityDataCollectionLists: dataCollectionList.value.map((item) => ({
       DataPointName: item.DataPointName, DataType: item.Type, DataValue: item.value,
     })),
+    OperatorBy: userStore.getUserInfo,
   };
   const res: any = await ContainerOperationExecution(params);
   if (res.success && res.code === 0) {

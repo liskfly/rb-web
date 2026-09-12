@@ -1,7 +1,17 @@
 <template>
-  <div class="p-2">
-    <el-card shadow="always" :body-style="{ padding: '8px' }">
-      <div class="flex justify-between items-start">
+  <div class="p-2 h-full box-border">
+    <el-card
+      shadow="always"
+      class="h-full"
+      :body-style="{
+        padding: '8px',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        boxSizing: 'border-box'
+      }"
+    >
+      <div class="flex-none flex justify-between items-start">
         <div></div>
         <el-form ref="queryFormRef" size="small" :model="queryForm" label-width="auto" :inline="true">
           <el-form-item label="工单编号" class="mb-2">
@@ -30,6 +40,34 @@
               <el-option label="全部" :value="null" />
               <el-option v-for="item in productFamilyOptions" :key="item.ProductFamilyName" :label="item.ProductFamilyName" :value="item.ProductFamilyName" />
             </el-select>
+          </el-form-item>
+          <el-form-item label="计划开始时间" class="mb-2">
+            <el-date-picker
+              v-model="plannedStartDateRange"
+              type="daterange"
+              value-format="YYYY-MM-DD"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+              range-separator="至"
+              unlink-panels
+              clearable
+              style="width: 250px"
+              @change="handlePlannedStartDateChange"
+            />
+          </el-form-item>
+          <el-form-item label="计划结束时间" class="mb-2">
+            <el-date-picker
+              v-model="plannedCompletionDateRange"
+              type="daterange"
+              value-format="YYYY-MM-DD"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+              range-separator="至"
+              unlink-panels
+              clearable
+              style="width: 250px"
+              @change="handlePlannedCompletionDateChange"
+            />
           </el-form-item>
           <el-form-item label="产品名称" class="mb-2">
             <el-select v-model="queryForm.Product" style="width: 200px" @change="getData" placeholder="全部" clearable filterable>
@@ -64,16 +102,17 @@
         </el-form>
       </div>
 
-      <el-table 
-        :data="tableData" 
-        size="small" 
-        style="width: 100%" 
-        :height="tableHeight" 
-        border 
-        fit 
-        highlight-current-row
-        @selection-change="handleSelectionChange"
-      >
+      <div class="flex-1 min-h-0">
+        <el-table
+          :data="tableData"
+          size="small"
+          style="width: 100%"
+          height="100%"
+          border
+          fit
+          highlight-current-row
+          @selection-change="handleSelectionChange"
+        >
         <el-table-column type="selection" width="45" align="center" />
         <el-table-column type="index" align="center" label="序号" width="55">
           <template #default="scope">
@@ -134,9 +173,10 @@
             <span>{{ scope.row.PlannedCompletionDate ? formatDate(scope.row.PlannedCompletionDate) : '-' }}</span>
           </template>
         </el-table-column>
-      </el-table>
+        </el-table>
+      </div>
 
-      <div class="mt-2">
+      <div class="mt-2 flex-none">
         <el-pagination background @size-change="handleSizeChange" @current-change="handleCurrentChange"
           :pager-count="5" :current-page="pageObj.currentPage" :page-size="pageObj.pageSize"
           :page-sizes="[30, 50, 100, 200, 300]" layout="total,sizes, prev, pager, next" :total="total" />
@@ -146,7 +186,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, onMounted } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { 
   WorkOrderOperationQuery,
@@ -163,6 +203,10 @@ import {
 // ====== 查询表单 ======
 const queryForm = ref({
   MfgOrder: "",
+  PlannedStartDate: "",
+  PlannedEndDate: "",
+  PlannedCompletionStartDate: "",
+  PlannedCompletionEndDate: "",
   MfgLine: null as string | null,
   WorkCenter: null as string | null,
   ProductType: null as string | null,
@@ -170,6 +214,8 @@ const queryForm = ref({
   Product: null as string | null,
   OrderStatus: null as string | null,
 });
+const plannedStartDateRange = ref<string[]>([]);
+const plannedCompletionDateRange = ref<string[]>([]);
 
 // ====== 下拉选项 ======
 const workCenterOptions = ref<any[]>([]);
@@ -183,7 +229,6 @@ const productNameOptions = ref<any[]>([]);
 const tableData = ref<any[]>([]);
 const total = ref(0);
 const pageObj = ref({ currentPage: 1, pageSize: 30 });
-const tableHeight = ref(400);
 
 // ====== 选中的行 ======
 const selectedRows = ref<any[]>([]);
@@ -222,6 +267,22 @@ const getStatusType = (status: string) => {
 /** 表格选中变化 */
 const handleSelectionChange = (selection: any[]) => {
   selectedRows.value = selection;
+};
+
+/** 计划开始时间范围变化 */
+const handlePlannedStartDateChange = (value: string[] | null) => {
+  queryForm.value.PlannedStartDate = value?.[0] || "";
+  queryForm.value.PlannedEndDate = value?.[1] || "";
+  pageObj.value.currentPage = 1;
+  getData();
+};
+
+/** 计划结束时间范围变化 */
+const handlePlannedCompletionDateChange = (value: string[] | null) => {
+  queryForm.value.PlannedCompletionStartDate = value?.[0] || "";
+  queryForm.value.PlannedCompletionEndDate = value?.[1] || "";
+  pageObj.value.currentPage = 1;
+  getData();
 };
 
 /** 获取下拉数据 */
@@ -270,6 +331,10 @@ const fetchDropdownData = async () => {
 const getData = async () => {
   const params: any = {
     MfgOrder: queryForm.value.MfgOrder || undefined,
+    PlannedStartDate: queryForm.value.PlannedStartDate || undefined,
+    PlannedEndDate: queryForm.value.PlannedEndDate || undefined,
+    PlannedCompletionStartDate: queryForm.value.PlannedCompletionStartDate || undefined,
+    PlannedCompletionEndDate: queryForm.value.PlannedCompletionEndDate || undefined,
     MfgLine: queryForm.value.MfgLine || undefined,
     WorkCenter: queryForm.value.WorkCenter || undefined,
     ProductType: queryForm.value.ProductType || undefined,
@@ -309,6 +374,10 @@ const getData = async () => {
 const resetQuery = () => {
   queryForm.value = {
     MfgOrder: "",
+    PlannedStartDate: "",
+    PlannedEndDate: "",
+    PlannedCompletionStartDate: "",
+    PlannedCompletionEndDate: "",
     MfgLine: null,
     WorkCenter: null,
     ProductType: null,
@@ -316,6 +385,8 @@ const resetQuery = () => {
     Product: null,
     OrderStatus: null,
   };
+  plannedStartDateRange.value = [];
+  plannedCompletionDateRange.value = [];
   pageObj.value.currentPage = 1;
   getData();
 };
@@ -412,21 +483,10 @@ const handleCurrentChange = (val: number) => {
   getData();
 };
 
-/** 表格高度自适应 */
-const updateTableHeight = () => {
-  tableHeight.value = window.innerHeight - 220;
-};
-
 onMounted(() => {
-  updateTableHeight();
-  window.addEventListener("resize", updateTableHeight);
   fetchDropdownData().then(() => {
     getData();
   });
-});
-
-onBeforeUnmount(() => {
-  window.removeEventListener("resize", updateTableHeight);
 });
 </script>
 

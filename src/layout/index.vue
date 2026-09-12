@@ -8,7 +8,7 @@
           <TagsView></TagsView>
         </div>
         <!-- <el-scrollbar class=" h-[calc(100vh-85px)] p-[10px]"> -->
-        <AppView class="sol  h-[calc(100dvh-45px)] overflow-auto"></AppView>
+        <AppView class="sol  h-[calc(100dvh-80px)] overflow-auto"></AppView>
         <!-- </el-scrollbar> -->
       </div>
     </div>
