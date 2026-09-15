@@ -28,32 +28,32 @@ export default defineConfig({
     port: 5174,
     proxy: {
       '/controlApi': { 
-        target: 'http://192.168.1.42:12024',
+        target: 'http://192.168.1.56:12024',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/controlApi/, '') 
       },
       '/smtApi': {
-        target: 'http://192.168.1.42:12024',
+        target: 'http://192.168.1.56:12024',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/smtApi/, '') 
       },
       '/dipApi': {
-        target: 'http://192.168.1.42:12024',
+        target: 'http://192.168.1.56:12024',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/dipApi/, '') 
       },
       '/scrApi': {
-        target: 'http://192.168.1.42:12024',
+        target: 'http://192.168.1.56:12024',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/scrApi/, '') 
       },
       '/asyApi': {
-        target: 'http://192.168.1.42:12024',
+        target: 'http://192.168.1.56:12024',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/asyApi/, '') 
       },
      '/reportApi': {
-      target: 'http://192.168.1.42:12024',
+      target: 'http://192.168.1.56:12024',
       changeOrigin: true,
       rewrite: (path) => path.replace(/^\/reportApi/, '') 
     },

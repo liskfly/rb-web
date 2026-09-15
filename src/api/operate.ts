@@ -1303,6 +1303,19 @@ export function ContainersOperationContainerOperationExecution(data: any) {
     })
 }
 
+/** 批量过站出站（容器操作） */
+export function ContainersOperationBatchMoveStd(data: {
+    MfgOrderName: string;
+    ResourceName: string;
+    ContainerNames: string[];
+}) {
+    return request({
+        url: "/api/ContainersOperation/BatchMoveStd",
+        method: "post",
+        data
+    })
+}
+
 /** 查询检验类别列表 */
 export function QueryInspectionCategoryList(data: any) {
     return request({
@@ -1525,4 +1538,13 @@ export function MfgOrderConsumeHeaderQuery(data: any) {
 
 export function MfgOrderConsumeDetailQuery(data: any) {
   return request({ url: "/api/ReBornReport/MfgOrderConsumeDetailQuery", method: "post", data });
+}
+
+// 检验明细报表：工单汇总及检验历史
+export function InspectionOrderSummaryQuery(data: any) {
+  return request({ url: "/api/ReBornReport/InspectionOrderSummaryQuery", method: "post", data });
+}
+
+export function InspectionDetailReportQuery(data: any) {
+  return request({ url: "/api/ReBornReport/InspectionDetailReportQuery", method: "post", data });
 }

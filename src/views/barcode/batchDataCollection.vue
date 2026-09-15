@@ -65,6 +65,9 @@
         </div>
         <div class="flex items-center gap-2 flex-shrink-0">
           <el-button type="primary" size="large" @click="handleSubmit">提交</el-button>
+          <el-button type="warning" size="large" :loading="batchMoveStdLoading" @click="handleBatchMoveStd">
+            批量出站
+          </el-button>
           <el-button size="large" @click="router.push('/dipWork/productionStation')">生产过站</el-button>
         </div>
       </div>
@@ -126,75 +129,86 @@
         </div>
         <!-- 表格容器 - 添加滚动 -->
         <div class="flex-1 p-2 min-h-0 overflow-hidden" v-else>
-          <div class="h-full pb-[35px] overflow-auto">
-            <el-table
-              :data="displayTableData"
-              size="small" 
-              border 
-              style="width:100%"
-              max-height="100%"
-              height="100%"
-            >
-              <el-table-column prop="ContainerName" label="SN码" width="160" fixed="left" show-overflow-tooltip>
-                <template #default="scope">
-                  <span v-if="scope.row._isBatch" class="font-bold">批量操作</span>
-                  <span v-else>{{ scope.row.ContainerName }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column v-for="(item, idx) in dataCollectionItems" :key="idx" :label="item.DataPointName" min-width="180">
-                <template #default="scope">
-                  <template v-if="scope.row._isBatch && item.Type === 'Boolean'">
-                    <div class="flex justify-center gap-1">
-                      <el-button size="small" @click="batchSetBoolean(idx, 'true')">{{ item.BooleanTrue || '合格' }}</el-button>
-                      <el-button size="small" type="danger" @click="batchSetBoolean(idx, 'false')">{{ item.BooleanFalse || '不合格' }}</el-button>
-                    </div>
-                  </template>
-                  <template v-else-if="item.Type === 'Boolean'">
-                    <el-radio-group v-model="scope.row.values[idx]" size="small">
-                      <el-radio value="true">{{ item.BooleanTrue || '合格' }}</el-radio>
-                      <el-radio value="false">{{ item.BooleanFalse || '不合格' }}</el-radio>
-                    </el-radio-group>
-                  </template>
-                  <template v-else-if="!scope.row._isBatch && item.Type === 'Integer'">
-                    <div>
-                      <el-input v-model="scope.row.values[idx]" size="small" :placeholder="item.DataPointName"
-                        :class="{ 'is-error': scope.row._errors?.[idx]?.error }"
-                        @input="(val: any) => { scope.row.values[idx] = String(val).replace(/[^0-9-]/g, ''); validateCell(scope.row, idx); }"
-                        @blur="validateCell(scope.row, idx)" />
-                      <div v-if="scope.row._errors?.[idx]?.error" class="text-red-500 text-xs mt-0.5">
-                        {{ scope.row._errors[idx].msg }}
+          <div class="h-full operation-virtual-table-wrap">
+            <el-auto-resizer>
+              <template #default="{ height, width }">
+                <el-table-v2
+                  class="operation-virtual-table"
+                  :columns="operationColumns"
+                  :data="batchList"
+                  :width="width"
+                  :height="height"
+                  :header-height="operationHeaderHeight"
+                  :row-height="58"
+                  :cache="6"
+                  row-key="ContainerName"
+                  fixed
+                  scrollbar-always-on
+                  :row-class="operationRowClass"
+                >
+                  <template #header-cell="{ column }">
+                    <div class="virtual-header-cell">
+                      <div class="virtual-header-title" :title="column.title">
+                        {{ column.title }}
+                      </div>
+                      <div
+                        class="virtual-header-reference"
+                        :title="column.kind === 'data' ? (column.item.ReferenceStandard || '-') : ''"
+                      >
+                        <span v-if="column.kind === 'container'" class="font-bold">参考标准</span>
+                        <span v-else-if="column.kind === 'data'">
+                          {{ column.item.ReferenceStandard || '-' }}
+                        </span>
+                      </div>
+                      <div v-if="hasBooleanItems" class="virtual-header-batch">
+                        <span v-if="column.kind === 'container'" class="font-bold">批量操作</span>
+                        <div v-else-if="column.kind === 'data' && column.item.Type === 'Boolean'" class="flex justify-center gap-1">
+                          <el-button size="small" @click="batchSetBoolean(column.itemIndex, 'true')">
+                            {{ column.item.BooleanTrue || '合格' }}
+                          </el-button>
+                          <el-button size="small" type="danger" @click="batchSetBoolean(column.itemIndex, 'false')">
+                            {{ column.item.BooleanFalse || '不合格' }}
+                          </el-button>
+                        </div>
                       </div>
                     </div>
                   </template>
-                  <template v-else-if="!scope.row._isBatch && item.Type === 'Float'">
-                    <div>
-                      <el-input v-model="scope.row.values[idx]" size="small" :placeholder="item.DataPointName"
-                        :class="{ 'is-error': scope.row._errors?.[idx]?.error }"
-                        @input="(val: any) => { scope.row.values[idx] = String(val).replace(/[^0-9.-]/g, ''); validateCell(scope.row, idx); }"
-                        @blur="validateCell(scope.row, idx)" />
-                      <div v-if="scope.row._errors?.[idx]?.error" class="text-red-500 text-xs mt-0.5">
-                        {{ scope.row._errors[idx].msg }}
-                      </div>
+
+                  <template #cell="{ rowData, column }">
+                    <div v-if="column.kind === 'container'" class="virtual-sn-cell" :title="rowData.ContainerName">
+                      {{ rowData.ContainerName }}
                     </div>
-                  </template>
-                  <template v-else-if="!scope.row._isBatch">
-                    <div>
-                      <el-input v-model="scope.row.values[idx]" size="small" :placeholder="item.DataPointName"
-                        :class="{ 'is-error': scope.row._errors?.[idx]?.error }"
-                        @blur="validateCell(scope.row, idx)" />
-                      <div v-if="scope.row._errors?.[idx]?.error" class="text-red-500 text-xs mt-0.5">
-                        {{ scope.row._errors[idx].msg }}
-                      </div>
+                    <div v-else-if="column.kind === 'history'" class="virtual-history-cell">
+                      <el-button type="primary" size="small" @click="openHistory(rowData)">查看</el-button>
                     </div>
+                    <template v-else-if="column.kind === 'data'">
+                      <el-radio-group
+                        v-if="column.item.Type === 'Boolean'"
+                        :model-value="rowData.values[column.itemIndex]"
+                        size="small"
+                        @update:model-value="(value: any) => updateCellValue(rowData, column, value)"
+                      >
+                        <el-radio value="true">{{ column.item.BooleanTrue || '合格' }}</el-radio>
+                        <el-radio value="false">{{ column.item.BooleanFalse || '不合格' }}</el-radio>
+                      </el-radio-group>
+                      <div v-else class="virtual-input-cell">
+                        <el-input
+                          :model-value="rowData.values[column.itemIndex]"
+                          size="small"
+                          :placeholder="column.item.DataPointName"
+                          :class="{ 'is-error': rowData._errors?.[column.itemIndex]?.error }"
+                          @update:model-value="(value: any) => updateCellValue(rowData, column, value)"
+                          @blur="validateCell(rowData, column.itemIndex)"
+                        />
+                        <div v-if="rowData._errors?.[column.itemIndex]?.error" class="virtual-cell-error">
+                          {{ rowData._errors[column.itemIndex].msg }}
+                        </div>
+                      </div>
+                    </template>
                   </template>
-                </template>
-              </el-table-column>
-              <el-table-column label="查看历史" width="90" fixed="right" align="center">
-                <template #default="scope">
-                  <el-button v-if="!scope.row._isBatch" type="primary" size="small" @click="openHistory(scope.row)">查看</el-button>
-                </template>
-              </el-table-column>
-            </el-table>
+                </el-table-v2>
+              </template>
+            </el-auto-resizer>
           </div>
         </div>
       </div>
@@ -228,6 +242,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
+import type { Column } from "element-plus";
+import { TableV2FixedDir } from "element-plus";
 import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import {
@@ -239,6 +255,7 @@ import {
   ContainersOperationResourceQuery,
   ContainersOperationResourceDetailQuery,
   ContainersOperationContainerOperationExecution,
+  ContainersOperationBatchMoveStd,
 } from "@/api/operate";
 import { useUserStoreWithOut } from '@/stores/modules/user';
 
@@ -296,6 +313,7 @@ const info = ref({
 const dataCollectionItems = ref<any[]>([]);
 const batchList = ref<any[]>([]);
 const lastKeyFields = ref<any>({});
+const batchMoveStdLoading = ref(false);
 
 const batchSetBoolean = (idx: number, value: any) => {
   batchList.value.forEach((row: any) => {
@@ -323,13 +341,65 @@ const validateCell = (row: any, idx: number) => {
   }
 };
 
-const displayTableData = computed(() => {
-  if (batchList.value.length === 0) return [];
-  const hasBool = dataCollectionItems.value.some((item: any) => item.Type === 'Boolean');
-  if (!hasBool) return batchList.value;
-  const batchRow: any = { _isBatch: true, ContainerName: '批量操作', values: [], SpecHistoryList: [] };
-  return [batchRow, ...batchList.value];
-});
+type OperationColumn = Column<any> & {
+  kind: 'container' | 'data' | 'history';
+  itemIndex?: number;
+  item?: any;
+};
+
+const hasBooleanItems = computed(() =>
+  dataCollectionItems.value.some((item: any) => item.Type === 'Boolean'),
+);
+
+const operationHeaderHeight = computed(() => hasBooleanItems.value ? 138 : 92);
+
+const operationColumns = computed<OperationColumn[]>(() => [
+  {
+    key: 'ContainerName',
+    dataKey: 'ContainerName',
+    title: 'SN码',
+    width: 160,
+    fixed: TableV2FixedDir.LEFT,
+    kind: 'container',
+  },
+  ...dataCollectionItems.value.map((item: any, itemIndex: number) => ({
+    key: `collection-${itemIndex}-${item.DataPointName}`,
+    dataKey: `values.${itemIndex}`,
+    title: item.DataPointName,
+    width: Math.max(210, Math.min(320, Array.from(String(item.DataPointName || '')).length * 14 + 48)),
+    align: 'center' as const,
+    kind: 'data' as const,
+    itemIndex,
+    item,
+  })),
+  {
+    key: 'history',
+    dataKey: 'history',
+    title: '查看历史',
+    width: 90,
+    fixed: TableV2FixedDir.RIGHT,
+    align: 'center',
+    kind: 'history',
+  },
+]);
+
+const operationRowClass = ({ rowIndex }: { rowIndex: number }) =>
+  rowIndex % 2 === 1 ? 'operation-v2-row--striped' : '';
+
+const updateCellValue = (row: any, column: OperationColumn, value: any) => {
+  const idx = Number(column.itemIndex);
+  const type = column.item?.Type;
+  let nextValue = value;
+  if (type === 'Integer') {
+    nextValue = String(value ?? '').replace(/[^0-9-]/g, '');
+  } else if (type === 'Float') {
+    nextValue = String(value ?? '').replace(/[^0-9.-]/g, '');
+  }
+  row.values[idx] = nextValue;
+  if (type === 'Integer' || type === 'Float' || type === 'Boolean') {
+    validateCell(row, idx);
+  }
+};
 
 // 历史数据弹窗
 const historyDialogVisible = ref(false);
@@ -421,6 +491,29 @@ const handleQuery = async () => {
   }
 };
 
+const clearOperationData = () => {
+  info.value = {
+    MfgOrderName: "", OrderStatusName: "", PlannedQuantity: null,
+    CompletedQuantity: null, SpecName: "", ResourceName: "", InvAddCode: "",
+    ProductName: "", ProductFamily: "", ProductDesc: "",
+  };
+  batchList.value = [];
+  dataCollectionItems.value = [];
+  lastKeyFields.value = {};
+};
+
+const refreshCurrentQueryAfterSuccess = async () => {
+  const shouldRefresh =
+    (entryMode.value === 'order' && Boolean(mfgOrder.value)) ||
+    (entryMode.value === 'resource' && Boolean(resourceName.value)) ||
+    (entryMode.value === 'orderSpec' && Boolean(collectionMfgOrder.value) && Boolean(collectionSpecName.value));
+
+  clearOperationData();
+  if (shouldRefresh) {
+    await handleQuery();
+  }
+};
+
 const handleSubmit = async () => {
   if (batchList.value.length === 0) {
     ElMessage.warning('请先查询数据');
@@ -483,14 +576,54 @@ const handleSubmit = async () => {
   const res: any = await ContainersOperationContainerOperationExecution(params);
   if (res && res.success && res.code === 0) {
     ElMessage.success(res.msg || '提交成功');
-    info.value = { MfgOrderName: "", OrderStatusName: "", PlannedQuantity: null,
-      CompletedQuantity: null, SpecName: "", ResourceName: "", InvAddCode: "",
-      ProductName: "", ProductFamily: "", ProductDesc: "" };
-    batchList.value = [];
-    dataCollectionItems.value = [];
-    lastKeyFields.value = {};
+    await refreshCurrentQueryAfterSuccess();
   } else {
     ElMessage.error((res && res.msg) || '执行失败');
+  }
+};
+
+const handleBatchMoveStd = async () => {
+  if (batchList.value.length === 0) {
+    ElMessage.warning('请先查询数据');
+    return;
+  }
+
+  const mfgOrderName = info.value.MfgOrderName || lastKeyFields.value.MfgOrderName || '';
+  const currentResourceName = info.value.ResourceName || lastKeyFields.value.ResourceName || '';
+  const containerNames = Array.from(new Set(
+    batchList.value
+      .map((item: any) => String(item.ContainerName || '').trim())
+      .filter(Boolean),
+  ));
+
+  if (!mfgOrderName) {
+    ElMessage.warning('当前数据缺少工单号，无法批量出站');
+    return;
+  }
+  if (!currentResourceName) {
+    ElMessage.warning('当前数据缺少设备名称，无法批量出站');
+    return;
+  }
+  if (containerNames.length === 0) {
+    ElMessage.warning('操作区没有可出站的SN码');
+    return;
+  }
+
+  batchMoveStdLoading.value = true;
+  try {
+    const res: any = await ContainersOperationBatchMoveStd({
+      MfgOrderName: mfgOrderName,
+      ResourceName: currentResourceName,
+      ContainerNames: containerNames,
+    });
+    if (res && res.success && res.code === 0) {
+      ElMessage.success(res.msg || '批量出站成功');
+      await refreshCurrentQueryAfterSuccess();
+    } else {
+      ElMessage.warning((res && res.msg) || '当前批次无法出站');
+    }
+  } finally {
+    batchMoveStdLoading.value = false;
   }
 };
 
@@ -510,5 +643,106 @@ onMounted(async () => {
 /* ElMessageBox 挂载在 body 下，不能用 scoped */
 .range-confirm-box {
   max-width: 600px;
+}
+
+.operation-virtual-table-wrap,
+.operation-virtual-table-wrap > .el-auto-resizer {
+  width: 100%;
+  height: 100%;
+}
+
+.operation-virtual-table {
+  border: 1px solid #ebeef5;
+  --el-table-header-bg-color: #f5f7fa;
+}
+
+.operation-virtual-table .el-table-v2__header-cell {
+  padding: 0;
+  border-right: 1px solid #ebeef5;
+}
+
+.operation-virtual-table .el-table-v2__row-cell {
+  border-right: 1px solid #ebeef5;
+}
+
+.operation-virtual-table .operation-v2-row--striped {
+  background: #fafafa;
+}
+
+.virtual-header-cell {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.virtual-header-title,
+.virtual-header-reference,
+.virtual-header-batch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  overflow: hidden;
+  padding: 0 8px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.virtual-header-title {
+  height: 46px;
+  flex: 0 0 46px;
+  color: #606266;
+  font-weight: 600;
+}
+
+.virtual-header-reference {
+  height: 46px;
+  flex: 0 0 46px;
+  border-top: 1px solid #dcdfe6;
+  color: #606266;
+  background: #f5f7fa;
+}
+
+.virtual-header-batch {
+  height: 46px;
+  flex: 0 0 46px;
+  border-top: 1px solid #dcdfe6;
+  color: #606266;
+  background: #fff;
+}
+
+.virtual-sn-cell {
+  overflow: hidden;
+  width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.virtual-history-cell {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+
+.virtual-input-cell {
+  width: 100%;
+}
+
+.virtual-cell-error {
+  overflow: hidden;
+  margin-top: 2px;
+  color: #f56c6c;
+  font-size: 11px;
+  line-height: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.operation-virtual-table .el-radio {
+  margin-right: 10px;
 }
 </style>
