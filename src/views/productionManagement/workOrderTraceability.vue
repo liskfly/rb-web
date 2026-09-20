@@ -137,7 +137,12 @@
       </el-form>
     </el-card>
 
-    <div class="content-grid">
+    <div
+      ref="contentGridRef"
+      class="content-grid"
+      :class="{ 'is-resizing': isPanelResizing }"
+      :style="contentGridStyle"
+    >
       <el-card shadow="never" class="panel-card order-panel" :body-style="panelBodyStyle">
         <template #header>
           <div class="panel-title">
@@ -169,7 +174,12 @@
               :label="column.label"
               :width="column.width"
               show-overflow-tooltip
-            />
+            >
+              <template #default="scope">
+                <span v-if="column.prop === 'SNRange'">{{ formatOrderSNRange(scope.row) }}</span>
+                <span v-else>{{ scope.row[column.prop] }}</span>
+              </template>
+            </el-table-column>
             <template #empty>
               <el-empty description="暂无工单数据" :image-size="72" />
             </template>
@@ -186,6 +196,18 @@
           :total="orderRows.length"
         />
       </el-card>
+
+      <div
+        class="panel-splitter"
+        role="separator"
+        aria-orientation="vertical"
+        title="左右拖动调整表格宽度，双击恢复"
+        @dblclick="resetPanelWidth"
+        @pointerdown="startPanelResize"
+        @pointermove="handlePanelResize"
+        @pointerup="stopPanelResize"
+        @pointercancel="stopPanelResize"
+      />
 
       <el-card shadow="never" class="panel-card detail-panel" :body-style="panelBodyStyle">
         <template #header>
@@ -314,6 +336,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
+import { useHorizontalPaneResize } from "@/hooks/useHorizontalPaneResize";
 import {
   MfgOrderBomQuery,
   MfgOrderCompletionQuery,
@@ -342,6 +365,16 @@ type SelectOption = { label: string; value: string };
 type PrimaryTab = "containers" | "bom" | "picking" | "confirm" | "completion";
 type LotTab = "move" | "inspection" | "consume";
 
+const {
+  containerRef: contentGridRef,
+  gridStyle: contentGridStyle,
+  isResizing: isPanelResizing,
+  resetPaneWidth: resetPanelWidth,
+  resize: handlePanelResize,
+  startResize: startPanelResize,
+  stopResize: stopPanelResize,
+} = useHorizontalPaneResize({ minLeft: 340, minRight: 520 });
+
 const emptyQuery = () => ({
   MfgOrderName: "",
   SN: "",
@@ -362,7 +395,7 @@ const emptyQuery = () => ({
 });
 
 const queryForm = reactive(emptyQuery());
-const plannedDate = ref<string[]>(getRecentDateStrings(7));
+const plannedDate = ref<string[]>(getRecentDateStrings(30));
 const dateShortcuts = [
   { text: "最近三天", value: () => getRecentDateRange(3) },
   { text: "最近七天", value: () => getRecentDateRange(7) },
@@ -426,24 +459,25 @@ const panelBodyStyle = { padding: "0 10px 10px", height: "calc(100% - 49px)" };
 
 const orderColumns: Column[] = [
   { prop: "MfgOrderName", label: "工单号", width: 150 },
+  { prop: "VN", label: "VN", width: 140 },
+  { prop: "SNRange", label: "SN码范围", width: 260 },
+  { prop: "OrderStatusName", label: "状态", width: 100 },
+  { prop: "Qty", label: "总数量", width: 90 },
+  { prop: "MfgOrderComplete", label: "完成数量", width: 90 },
+  { prop: "PlannedStartDate", label: "计划开始时间", width: 160 },
+  { prop: "PlannedCompletionDate", label: "计划完成时间", width: 160 },
   { prop: "MfgOrderDesc", label: "工单描述", width: 160 },
   { prop: "ProductName", label: "物料编码", width: 140 },
   { prop: "ProductDesc", label: "物料描述", width: 160 },
-  { prop: "InvAddCode", label: "存货代码", width: 120 },
   { prop: "ProductTypeName", label: "产品类型", width: 110 },
   { prop: "ProductTypeDesc", label: "类型描述", width: 110 },
   { prop: "ProductFamilyName", label: "产品型号", width: 120 },
   { prop: "ProductFamilyDesc", label: "型号描述", width: 130 },
   { prop: "WorkflowName", label: "工艺流程", width: 140 },
-  { prop: "Qty", label: "计划数", width: 90 },
   { prop: "UOMName", label: "单位", width: 80 },
-  { prop: "PlannedStartDate", label: "计划开始", width: 160 },
-  { prop: "PlannedCompletionDate", label: "计划完工", width: 160 },
-  { prop: "OrderStatusName", label: "状态", width: 100 },
   { prop: "OrderTypeName", label: "订单类型", width: 100 },
   { prop: "WorkCenterName", label: "车间", width: 120 },
   { prop: "MfgLineName", label: "产线", width: 120 },
-  { prop: "MfgOrderComplete", label: "完工数", width: 90 },
 ];
 
 const primaryColumnMap: Record<PrimaryTab, Column[]> = {
@@ -455,7 +489,7 @@ const primaryColumnMap: Record<PrimaryTab, Column[]> = {
     { prop: "UOMName", label: "单位", width: 80 },
     { prop: "ProductName", label: "物料编码", width: 140 },
     { prop: "ProductDesc", label: "物料描述", width: 160 },
-    { prop: "InvAddCode", label: "存货代码", width: 120 },
+    { prop: "VN", label: "VN", width: 120 },
     { prop: "ProductTypeName", label: "产品类型", width: 110 },
     { prop: "ProductTypeDesc", label: "类型描述", width: 110 },
     { prop: "ProductFamilyName", label: "产品型号", width: 120 },
@@ -469,7 +503,7 @@ const primaryColumnMap: Record<PrimaryTab, Column[]> = {
     { prop: "MfgOrderName", label: "工单号", width: 150 },
     { prop: "ProductName", label: "物料编码", width: 140 },
     { prop: "ProductDesc", label: "物料描述", width: 160 },
-    { prop: "InvAddCode", label: "存货代码", width: 120 },
+    { prop: "VN", label: "VN", width: 120 },
     { prop: "ProductFamilyName", label: "产品型号", width: 120 },
     { prop: "ProductFamilyDesc", label: "型号描述", width: 130 },
     { prop: "IssueControl", label: "发料控制", width: 100 },
@@ -486,7 +520,7 @@ const primaryColumnMap: Record<PrimaryTab, Column[]> = {
     { prop: "MfgOrderName", label: "工单号", width: 150 },
     { prop: "ProductName", label: "物料编码", width: 140 },
     { prop: "ProductDesc", label: "物料描述", width: 160 },
-    { prop: "InvAddCode", label: "存货代码", width: 120 },
+    { prop: "VN", label: "VN", width: 120 },
     { prop: "ProductFamilyName", label: "产品型号", width: 120 },
     { prop: "ProductFamilyDesc", label: "型号描述", width: 130 },
     { prop: "Operator", label: "领料人", width: 100 },
@@ -499,7 +533,7 @@ const primaryColumnMap: Record<PrimaryTab, Column[]> = {
     { prop: "MfgOrderName", label: "工单号", width: 150 },
     { prop: "ProductName", label: "物料编码", width: 140 },
     { prop: "ProductDesc", label: "物料描述", width: 160 },
-    { prop: "InvAddCode", label: "存货代码", width: 120 },
+    { prop: "VN", label: "VN", width: 120 },
     { prop: "ProductFamilyName", label: "产品型号", width: 120 },
     { prop: "ProductFamilyDesc", label: "型号描述", width: 130 },
     { prop: "Batch", label: "批次", width: 130 },
@@ -517,7 +551,7 @@ const primaryColumnMap: Record<PrimaryTab, Column[]> = {
     { prop: "Status", label: "状态", width: 120 },
     { prop: "ProductName", label: "物料编码", width: 140 },
     { prop: "ProductDesc", label: "物料描述", width: 160 },
-    { prop: "InvAddCode", label: "存货代码", width: 120 },
+    { prop: "VN", label: "VN", width: 120 },
     { prop: "ProductFamilyName", label: "产品型号", width: 120 },
     { prop: "ProductFamilyDesc", label: "型号描述", width: 130 },
     { prop: "SN", label: "SN", width: 170 },
@@ -606,7 +640,24 @@ const consumeDetailColumns: Column[] = [
   { prop: "QtyRequired", label: "需求数", width: 90 },
 ];
 
-const primaryColumns = computed(() => primaryColumnMap[currentTab.value]);
+const primaryColumns = computed(() => {
+  const columns = primaryColumnMap[currentTab.value];
+  const priority = ["VN", "SN", "Status"];
+
+  return [...columns]
+    .sort((left, right) => {
+      const leftIndex = priority.indexOf(left.prop);
+      const rightIndex = priority.indexOf(right.prop);
+      const leftOrder = leftIndex === -1 ? priority.length : leftIndex;
+      const rightOrder = rightIndex === -1 ? priority.length : rightIndex;
+      return leftOrder - rightOrder;
+    })
+    .map((column) => {
+      if (column.prop === "VN") return { ...column, label: "VN" };
+      if (column.prop === "SN") return { ...column, label: "SN码" };
+      return column;
+    });
+});
 const lotColumns = computed(() => lotColumnMap[lotTab.value]);
 const showLotDetail = computed(() => currentTab.value === "containers" && Boolean(currentSN.value));
 const showConsumeDetail = computed(
@@ -665,6 +716,31 @@ function responseRows(response: any): Row[] {
   return Array.isArray(response?.content) ? response.content : [];
 }
 
+function firstNonEmptyValue(row: Row, keys: string[]) {
+  for (const key of keys) {
+    const value = row[key];
+    if (value !== null && value !== undefined && value !== "") return String(value);
+  }
+  return "";
+}
+
+function formatOrderSNRange(row: Row) {
+  const range = firstNonEmptyValue(row, ["SNRange", "SnRange"]);
+  if (range) return range;
+
+  const start = firstNonEmptyValue(row, [
+    "SNFrom",
+    "SnFrom",
+    "SNStart",
+    "StartSN",
+    "MinSN",
+  ]);
+  const end = firstNonEmptyValue(row, ["SNTo", "SnTo", "SNEnd", "EndSN", "MaxSN"]);
+
+  if (start && end) return start === end ? start : `${start} - ${end}`;
+  return start || end || "-";
+}
+
 function buildQueryPayload() {
   queryForm.PlannedStartDateFrom = plannedDate.value?.[0] || "";
   queryForm.PlannedStartDateTo = plannedDate.value?.[1] || "";
@@ -698,7 +774,7 @@ async function handleQuery() {
 
 async function handleReset() {
   Object.assign(queryForm, emptyQuery());
-  plannedDate.value = getRecentDateStrings(7);
+  plannedDate.value = getRecentDateStrings(30);
   await loadMfgLines();
   await handleQuery();
 }
@@ -908,10 +984,42 @@ onMounted(async () => {
   z-index: 1;
   display: grid;
   flex: 1;
-  grid-template-columns: minmax(360px, 40%) minmax(560px, 60%);
-  gap: 8px;
+  grid-template-columns: minmax(360px, 2fr) 8px minmax(560px, 3fr);
+  gap: 0;
   height: auto;
   min-height: 0;
+}
+
+.panel-splitter {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  cursor: col-resize;
+  touch-action: none;
+
+  &::before {
+    width: 1px;
+    content: "";
+    background: #d6dee8;
+    transition: width 0.15s ease, background-color 0.15s ease;
+  }
+
+  &:hover::before {
+    width: 3px;
+    background: var(--el-color-primary);
+  }
+}
+
+.content-grid.is-resizing {
+  cursor: col-resize;
+  user-select: none;
+
+  .panel-splitter::before {
+    width: 3px;
+    background: var(--el-color-primary);
+  }
 }
 
 .panel-card {
@@ -1041,7 +1149,7 @@ onMounted(async () => {
 
 @media (max-width: 1200px) {
   .content-grid {
-    grid-template-columns: minmax(340px, 38%) minmax(560px, 62%);
+    grid-template-columns: minmax(340px, 38fr) 8px minmax(520px, 62fr);
   }
 
   .query-card {

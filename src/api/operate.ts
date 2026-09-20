@@ -1077,6 +1077,15 @@ export function QueryCompletionInboundDetailList(data: any) {
     })
 }
 
+/** FQC审核：按入库单号查询SN及按工序分组的检验信息 */
+export function QueryFqcAuditInspection(data: any) {
+    return request({
+        url: "/api/CompletionInbound/QueryFqcAuditInspection",
+        method: "post",
+        data
+    })
+}
+
 /** 保存/提交 完工入库单据 */
 export function SubmitCompletionInbound(data: any) {
     return request({

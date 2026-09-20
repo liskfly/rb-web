@@ -234,13 +234,25 @@
     <!-- FQC审核 Dialog -->
     <el-dialog
       v-model="auditDialogVisible"
-      title="FQC审核"
       draggable
       width="500px"
       :close-on-click-modal="false"
       align-center
       @close="auditDialogCancel"
     >
+      <template #header>
+        <div class="flex items-center gap-3">
+          <span>FQC审核</span>
+          <el-button
+            type="primary"
+            link
+            :loading="inspectionDetailLoading"
+            @click="handleViewInspectionDetail"
+          >
+            查看检验明细
+          </el-button>
+        </div>
+      </template>
       <el-form
         ref="auditFormRef"
         :model="auditForm"
@@ -294,15 +306,132 @@
         >
       </template>
     </el-dialog>
+
+    <!-- FQC检验明细 Dialog -->
+    <el-dialog
+      v-model="inspectionDetailVisible"
+      title="检验明细"
+      draggable
+      append-to-body
+      width="92%"
+      top="5vh"
+      :close-on-click-modal="false"
+      @close="inspectionDetailDialogCancel"
+    >
+      <div v-loading="inspectionDetailLoading" class="min-h-[260px]">
+        <el-descriptions :column="3" border size="small" class="mb-3">
+          <el-descriptions-item label="入库单号">
+            {{ inspectionDetailData.CompletionInboundNo || auditForm.CompletionInboundNo || "-" }}
+          </el-descriptions-item>
+          <el-descriptions-item label="SN数量">
+            {{ inspectionDetailData.SNList.length }}
+          </el-descriptions-item>
+          <el-descriptions-item label="工序数量">
+            {{ inspectionDetailData.ProcessList.length }}
+          </el-descriptions-item>
+        </el-descriptions>
+
+        <el-tabs v-model="inspectionDetailActiveTab" type="border-card">
+          <el-tab-pane
+            :label="`SN清单 (${inspectionDetailData.SNList.length})`"
+            name="sn-list"
+          >
+            <el-table
+              :data="inspectionDetailData.SNList"
+              border
+              stripe
+              size="small"
+              height="480"
+            >
+              <el-table-column type="index" label="序号" width="55" align="center" />
+              <el-table-column prop="SN" label="SN码" min-width="165" show-overflow-tooltip />
+              <el-table-column prop="MaterialCode" label="物料编码" min-width="140" show-overflow-tooltip />
+              <el-table-column prop="ProductFamily" label="产品系列" min-width="120" show-overflow-tooltip />
+              <el-table-column prop="ProductDesc" label="产品描述" min-width="140" show-overflow-tooltip />
+              <el-table-column prop="Qty" label="数量" width="80" align="right" />
+              <el-table-column prop="UomName" label="单位" width="90" align="center" />
+              <template #empty><el-empty description="暂无SN数据" /></template>
+            </el-table>
+          </el-tab-pane>
+
+          <el-tab-pane
+            v-for="(process, processIndex) in inspectionDetailData.ProcessList"
+            :key="`${process.ProcessName}-${processIndex}`"
+            :label="`${process.ProcessName || '未命名工序'} (${process.Inspections.length})`"
+            :name="`process-${processIndex}`"
+          >
+            <el-table
+              :data="process.Inspections"
+              border
+              stripe
+              size="small"
+              height="480"
+              row-key="SN"
+            >
+              <el-table-column type="expand" width="48">
+                <template #default="scope">
+                  <div class="px-4 py-2">
+                    <el-table :data="scope.row.Items || []" border size="small">
+                      <el-table-column type="index" label="序号" width="55" align="center" />
+                      <el-table-column prop="ItemName" label="检验项目" min-width="210" show-overflow-tooltip />
+                      <el-table-column prop="Description" label="描述" min-width="130" show-overflow-tooltip />
+                      <el-table-column prop="JudgeType" label="判定类型" width="100" />
+                      <el-table-column prop="ReferenceStandard" label="参考标准" min-width="170" show-overflow-tooltip />
+                      <el-table-column label="下限" width="90" align="right">
+                        <template #default="itemScope">
+                          {{ displayInspectionValue(itemScope.row.LowerLimit) }}
+                        </template>
+                      </el-table-column>
+                      <el-table-column label="上限" width="90" align="right">
+                        <template #default="itemScope">
+                          {{ displayInspectionValue(itemScope.row.UpperLimit) }}
+                        </template>
+                      </el-table-column>
+                      <el-table-column prop="ActualValue" label="实测值" min-width="110" show-overflow-tooltip />
+                      <el-table-column prop="Unit" label="单位" width="90" />
+                      <template #empty><el-empty description="暂无检验项目" :image-size="60" /></template>
+                    </el-table>
+                  </div>
+                </template>
+              </el-table-column>
+              <el-table-column type="index" label="序号" width="55" align="center" />
+              <el-table-column prop="SN" label="SN码" min-width="165" show-overflow-tooltip />
+              <el-table-column label="检验结果" width="100" align="center">
+                <template #default="scope">
+                  <el-tag :type="inspectionResultTagType(scope.row.InspectionResult)" size="small">
+                    {{ scope.row.InspectionResult || "-" }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="检验时间" min-width="180">
+                <template #default="scope">
+                  {{ formatInspectionTime(scope.row.OperatorTime) }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="OperatorBy" label="检验人" min-width="110" />
+              <el-table-column label="检验项数" width="90" align="right">
+                <template #default="scope">{{ scope.row.Items?.length || 0 }}</template>
+              </el-table-column>
+              <template #empty><el-empty description="该工序暂无检验数据" /></template>
+            </el-table>
+          </el-tab-pane>
+        </el-tabs>
+      </div>
+
+      <template #footer>
+        <el-button @click="inspectionDetailDialogCancel">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from "vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage } from "element-plus";
 import {
   QueryCompletionInboundList,
   QueryCompletionInboundDetailList,
+  QueryFqcAuditInspection,
   QueryWareHouse,
   SubmitCompletionInbound,
 } from "@/api/operate";
@@ -416,6 +545,19 @@ const auditForm = ref({
 const currentAuditRow = ref<any>(null);
 const wareHouseOptions = ref<any[]>([]);
 const auditDetailData = ref<any[]>([]); // 存储查询到的明细数据
+const inspectionDetailVisible = ref(false);
+const inspectionDetailLoading = ref(false);
+const inspectionDetailActiveTab = ref("sn-list");
+const inspectionDetailData = ref<{
+  CompletionInboundNo: string;
+  SNList: any[];
+  ProcessList: any[];
+}>({
+  CompletionInboundNo: "",
+  SNList: [],
+  ProcessList: [],
+});
+let inspectionDetailRequestId = 0;
 
 // 表单校验规则
 const auditRules = {
@@ -477,7 +619,87 @@ const handleAudit = async (row: any) => {
   auditDialogVisible.value = true;
 };
 
+const displayInspectionValue = (value: any) =>
+  value === null || value === undefined || value === "" ? "-" : value;
+
+const formatInspectionTime = (value: any) => {
+  if (!value) return "-";
+  return String(value).replace("T", " ");
+};
+
+const inspectionResultTagType = (value: any): "success" | "danger" | "info" => {
+  const result = String(value || "").trim();
+  if (result === "合格" || result === "通过") return "success";
+  if (result === "不合格" || result === "不通过") return "danger";
+  return "info";
+};
+
+const handleViewInspectionDetail = async () => {
+  const completionInboundNo = auditForm.value.CompletionInboundNo;
+  if (!completionInboundNo) {
+    ElMessage.warning("入库单号不存在");
+    return;
+  }
+  if (inspectionDetailLoading.value) return;
+
+  const requestId = ++inspectionDetailRequestId;
+  inspectionDetailActiveTab.value = "sn-list";
+  inspectionDetailData.value = {
+    CompletionInboundNo: completionInboundNo,
+    SNList: [],
+    ProcessList: [],
+  };
+  inspectionDetailVisible.value = true;
+  inspectionDetailLoading.value = true;
+
+  try {
+    const res: any = await QueryFqcAuditInspection({ CompletionInboundNo: completionInboundNo });
+    if (requestId !== inspectionDetailRequestId) return;
+
+    if (!res || res.success === false || res.code !== 0) {
+      ElMessage.warning(res?.msg || "获取检验明细失败");
+      return;
+    }
+
+    const content = res.content || {};
+    inspectionDetailData.value = {
+      CompletionInboundNo: content.CompletionInboundNo || completionInboundNo,
+      SNList: Array.isArray(content.SNList) ? content.SNList : [],
+      ProcessList: Array.isArray(content.ProcessList)
+        ? content.ProcessList.map((process: any) => ({
+            ...process,
+            Inspections: Array.isArray(process.Inspections)
+              ? process.Inspections.map((inspection: any) => ({
+                  ...inspection,
+                  Items: Array.isArray(inspection.Items) ? inspection.Items : [],
+                }))
+              : [],
+          }))
+        : [],
+    };
+  } catch (error: any) {
+    if (requestId === inspectionDetailRequestId) {
+      ElMessage.error(error?.msg || "获取检验明细失败");
+    }
+  } finally {
+    if (requestId === inspectionDetailRequestId) inspectionDetailLoading.value = false;
+  }
+};
+
+const inspectionDetailDialogCancel = () => {
+  inspectionDetailRequestId += 1;
+  inspectionDetailVisible.value = false;
+  inspectionDetailLoading.value = false;
+  inspectionDetailActiveTab.value = "sn-list";
+  inspectionDetailData.value = {
+    CompletionInboundNo: "",
+    SNList: [],
+    ProcessList: [],
+  };
+};
+
 const auditDialogCancel = () => {
+  inspectionDetailDialogCancel();
   auditDialogVisible.value = false;
   auditForm.value = {
     CompletionInboundNo: "",

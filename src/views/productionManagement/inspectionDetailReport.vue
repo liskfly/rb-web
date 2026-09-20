@@ -57,7 +57,12 @@
       </el-form>
     </el-card>
 
-    <div class="report-content">
+    <div
+      ref="reportContentRef"
+      class="report-content"
+      :class="{ 'is-resizing': isPanelResizing }"
+      :style="reportContentStyle"
+    >
       <el-card shadow="never" class="report-panel order-panel" :body-style="panelBodyStyle">
         <template #header>
           <div class="panel-title">
@@ -81,9 +86,9 @@
           >
             <el-table-column type="index" label="序号" width="54" fixed="left" align="center" />
             <el-table-column prop="MfgOrderName" label="工单" width="155" show-overflow-tooltip />
-            <el-table-column prop="InvAddCode" label="存货代码" width="125" show-overflow-tooltip />
-            <el-table-column prop="SNFrom" label="SN从" width="155" show-overflow-tooltip />
-            <el-table-column prop="SNTo" label="SN到" width="155" show-overflow-tooltip />
+            <el-table-column prop="VN" label="VN" width="125" show-overflow-tooltip />
+            <el-table-column prop="SNFrom" label="SN起" width="155" show-overflow-tooltip />
+            <el-table-column prop="SNTo" label="SN止" width="155" show-overflow-tooltip />
             <el-table-column prop="SNCount" label="SN数" width="80" align="right" />
             <el-table-column prop="Qty" label="工单总数" width="95" align="right" />
             <el-table-column prop="MfgOrderComplete" label="完成数" width="85" align="right" />
@@ -95,6 +100,18 @@
           </el-table>
         </div>
       </el-card>
+
+      <div
+        class="panel-splitter"
+        role="separator"
+        aria-orientation="vertical"
+        title="左右拖动调整表格宽度，双击恢复"
+        @dblclick="resetPanelWidth"
+        @pointerdown="startPanelResize"
+        @pointermove="handlePanelResize"
+        @pointerup="stopPanelResize"
+        @pointercancel="stopPanelResize"
+      />
 
       <el-card shadow="never" class="report-panel detail-panel" :body-style="panelBodyStyle">
         <template #header>
@@ -160,6 +177,7 @@
 <script setup lang="ts">
 import { computed, nextTick, reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
+import { useHorizontalPaneResize } from "@/hooks/useHorizontalPaneResize";
 import {
   InspectionDetailReportQuery,
   InspectionOrderSummaryQuery,
@@ -172,6 +190,16 @@ type DetailRow = {
   InspectionResult: any;
   values: Record<string, any>;
 };
+
+const {
+  containerRef: reportContentRef,
+  gridStyle: reportContentStyle,
+  isResizing: isPanelResizing,
+  resetPaneWidth: resetPanelWidth,
+  resize: handlePanelResize,
+  startResize: startPanelResize,
+  stopResize: stopPanelResize,
+} = useHorizontalPaneResize({ minLeft: 340, minRight: 520 });
 
 const emptyQuery = () => ({
   MfgOrderName: "",
@@ -443,9 +471,41 @@ async function loadInspectionDetails(row: Row) {
 .report-content {
   display: grid;
   flex: 1;
-  grid-template-columns: minmax(380px, 40%) minmax(580px, 60%);
-  gap: 8px;
+  grid-template-columns: minmax(380px, 2fr) 8px minmax(580px, 3fr);
+  gap: 0;
   min-height: 0;
+}
+
+.panel-splitter {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  cursor: col-resize;
+  touch-action: none;
+
+  &::before {
+    width: 1px;
+    content: "";
+    background: #d6dee8;
+    transition: width 0.15s ease, background-color 0.15s ease;
+  }
+
+  &:hover::before {
+    width: 3px;
+    background: var(--el-color-primary);
+  }
+}
+
+.report-content.is-resizing {
+  cursor: col-resize;
+  user-select: none;
+
+  .panel-splitter::before {
+    width: 3px;
+    background: var(--el-color-primary);
+  }
 }
 
 .report-panel {
@@ -489,7 +549,7 @@ async function loadInspectionDetails(row: Row) {
 
 @media (max-width: 1200px) {
   .report-content {
-    grid-template-columns: minmax(360px, 38%) minmax(580px, 62%);
+    grid-template-columns: minmax(360px, 38fr) 8px minmax(520px, 62fr);
   }
 }
 </style>

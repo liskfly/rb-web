@@ -160,7 +160,7 @@
                           {{ column.item.ReferenceStandard || '-' }}
                         </span>
                       </div>
-                      <div v-if="hasBooleanItems" class="virtual-header-batch">
+                      <div v-if="hasBatchOperations" class="virtual-header-batch">
                         <span v-if="column.kind === 'container'" class="font-bold">批量操作</span>
                         <div v-else-if="column.kind === 'data' && column.item.Type === 'Boolean'" class="flex justify-center gap-1">
                           <el-button size="small" @click="batchSetBoolean(column.itemIndex, 'true')">
@@ -170,6 +170,14 @@
                             {{ column.item.BooleanFalse || '不合格' }}
                           </el-button>
                         </div>
+                        <el-input
+                          v-else-if="column.kind === 'data'"
+                          :model-value="getBatchInputValue(column)"
+                          size="small"
+                          placeholder="输入后回车"
+                          @update:model-value="(value: any) => setBatchInputValue(column, value)"
+                          @keyup.enter.stop="batchSetInput(column)"
+                        />
                       </div>
                     </div>
                   </template>
@@ -241,7 +249,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, onBeforeUnmount, onDeactivated, computed, watch } from "vue";
 import type { Column } from "element-plus";
 import { TableV2FixedDir } from "element-plus";
 import { useRouter } from "vue-router";
@@ -258,9 +266,12 @@ import {
   ContainersOperationBatchMoveStd,
 } from "@/api/operate";
 import { useUserStoreWithOut } from '@/stores/modules/user';
+import { loadPageDraft, savePageDraft } from '@/utils/pageDraftStorage';
 
 const router = useRouter();
 const userStore = useUserStoreWithOut();
+const draftUserName = resolveDraftUserName();
+const draftStorageKey = draftUserName ? `batchDataCollection:v1:${draftUserName}` : '';
 const entryMode = ref("sn");
 
 const handleRadioChange = () => {
@@ -314,6 +325,17 @@ const dataCollectionItems = ref<any[]>([]);
 const batchList = ref<any[]>([]);
 const lastKeyFields = ref<any>({});
 const batchMoveStdLoading = ref(false);
+const batchInputValues = ref<Record<string, string>>({});
+
+const normalizeCellValue = (type: string, value: any) => {
+  if (type === 'Integer') {
+    return String(value ?? '').replace(/[^0-9-]/g, '');
+  }
+  if (type === 'Float') {
+    return String(value ?? '').replace(/[^0-9.-]/g, '');
+  }
+  return value;
+};
 
 const batchSetBoolean = (idx: number, value: any) => {
   batchList.value.forEach((row: any) => {
@@ -347,11 +369,9 @@ type OperationColumn = Column<any> & {
   item?: any;
 };
 
-const hasBooleanItems = computed(() =>
-  dataCollectionItems.value.some((item: any) => item.Type === 'Boolean'),
-);
+const hasBatchOperations = computed(() => dataCollectionItems.value.length > 0);
 
-const operationHeaderHeight = computed(() => hasBooleanItems.value ? 138 : 92);
+const operationHeaderHeight = computed(() => hasBatchOperations.value ? 138 : 92);
 
 const operationColumns = computed<OperationColumn[]>(() => [
   {
@@ -386,20 +406,182 @@ const operationColumns = computed<OperationColumn[]>(() => [
 const operationRowClass = ({ rowIndex }: { rowIndex: number }) =>
   rowIndex % 2 === 1 ? 'operation-v2-row--striped' : '';
 
+const getBatchInputKey = (column: OperationColumn) => String(column.key);
+
+const getBatchInputValue = (column: OperationColumn) =>
+  batchInputValues.value[getBatchInputKey(column)] ?? '';
+
+const setBatchInputValue = (column: OperationColumn, value: any) => {
+  const key = getBatchInputKey(column);
+  batchInputValues.value[key] = normalizeCellValue(column.item?.Type, value);
+};
+
+const batchSetInput = (column: OperationColumn) => {
+  const idx = Number(column.itemIndex);
+  const value = normalizeCellValue(column.item?.Type, getBatchInputValue(column));
+  batchInputValues.value[getBatchInputKey(column)] = value;
+  batchList.value.forEach((row: any) => {
+    row.values[idx] = value;
+    validateCell(row, idx);
+  });
+};
+
 const updateCellValue = (row: any, column: OperationColumn, value: any) => {
   const idx = Number(column.itemIndex);
   const type = column.item?.Type;
-  let nextValue = value;
-  if (type === 'Integer') {
-    nextValue = String(value ?? '').replace(/[^0-9-]/g, '');
-  } else if (type === 'Float') {
-    nextValue = String(value ?? '').replace(/[^0-9.-]/g, '');
-  }
+  const nextValue = normalizeCellValue(type, value);
   row.values[idx] = nextValue;
   if (type === 'Integer' || type === 'Float' || type === 'Boolean') {
     validateCell(row, idx);
   }
 };
+
+type BatchDataCollectionDraft = {
+  version: 1;
+  savedAt: number;
+  entryMode: string;
+  snInput: string;
+  mfgOrder: string;
+  collectionMfgOrder: string;
+  collectionSpecName: string;
+  collectionSpecOptions: any[];
+  resourceName: string;
+  info: Record<string, any>;
+  dataCollectionItems: any[];
+  batchList: any[];
+  lastKeyFields: Record<string, any>;
+};
+
+let draftPersistenceReady = false;
+let draftSaveTimer: ReturnType<typeof setTimeout> | undefined;
+let draftWriteQueue: Promise<void> = Promise.resolve();
+
+function resolveDraftUserName() {
+  const loginName = localStorage.getItem('LOGINNAME');
+  if (loginName) return loginName.trim();
+
+  const userInfo = userStore.getUserInfo;
+  if (typeof userInfo === 'string' || typeof userInfo === 'number') {
+    return String(userInfo).trim();
+  }
+  if (userInfo && typeof userInfo === 'object') {
+    return String(
+      userInfo.EmployeeName || userInfo.UserName || userInfo.userName || userInfo.Account || '',
+    ).trim();
+  }
+  return '';
+}
+
+function createDraftSnapshot(): BatchDataCollectionDraft {
+  return JSON.parse(JSON.stringify({
+    version: 1,
+    savedAt: Date.now(),
+    entryMode: entryMode.value,
+    snInput: snInput.value,
+    mfgOrder: mfgOrder.value,
+    collectionMfgOrder: collectionMfgOrder.value,
+    collectionSpecName: collectionSpecName.value,
+    collectionSpecOptions: collectionSpecOptions.value,
+    resourceName: resourceName.value,
+    info: info.value,
+    dataCollectionItems: dataCollectionItems.value,
+    batchList: batchList.value,
+    lastKeyFields: lastKeyFields.value,
+  })) as BatchDataCollectionDraft;
+}
+
+function persistDraftNow() {
+  if (!draftPersistenceReady || !draftStorageKey) return;
+  if (draftSaveTimer !== undefined) {
+    clearTimeout(draftSaveTimer);
+    draftSaveTimer = undefined;
+  }
+
+  let snapshot: BatchDataCollectionDraft;
+  try {
+    snapshot = createDraftSnapshot();
+  } catch (error) {
+    console.warn('批量进站页面草稿序列化失败', error);
+    return;
+  }
+
+  draftWriteQueue = draftWriteQueue
+    .catch(() => undefined)
+    .then(() => savePageDraft(draftStorageKey, snapshot));
+}
+
+function scheduleDraftSave() {
+  if (!draftPersistenceReady || !draftStorageKey) return;
+  if (draftSaveTimer !== undefined) clearTimeout(draftSaveTimer);
+  draftSaveTimer = setTimeout(persistDraftNow, 400);
+}
+
+async function restoreDraft() {
+  if (!draftStorageKey) return;
+  const draft = await loadPageDraft<BatchDataCollectionDraft>(draftStorageKey);
+  if (!draft || draft.version !== 1) return;
+
+  const validModes = ['sn', 'order', 'resource', 'orderSpec'];
+  entryMode.value = validModes.includes(draft.entryMode) ? draft.entryMode : 'sn';
+  snInput.value = String(draft.snInput || '');
+  mfgOrder.value = String(draft.mfgOrder || '');
+  collectionMfgOrder.value = String(draft.collectionMfgOrder || '');
+  collectionSpecName.value = String(draft.collectionSpecName || '');
+  collectionSpecOptions.value = Array.isArray(draft.collectionSpecOptions)
+    ? draft.collectionSpecOptions
+    : [];
+  resourceName.value = String(draft.resourceName || '');
+
+  if (draft.info && typeof draft.info === 'object') {
+    info.value = { ...info.value, ...draft.info };
+  }
+  dataCollectionItems.value = Array.isArray(draft.dataCollectionItems)
+    ? draft.dataCollectionItems
+    : [];
+  batchList.value = Array.isArray(draft.batchList)
+    ? draft.batchList.map((row: any) => ({
+        ...row,
+        values: dataCollectionItems.value.map((_: any, index: number) => row.values?.[index] ?? ''),
+        _errors: dataCollectionItems.value.map((_: any, index: number) =>
+          row._errors?.[index] ?? { error: false, type: '', msg: '' },
+        ),
+      }))
+    : [];
+  lastKeyFields.value = draft.lastKeyFields && typeof draft.lastKeyFields === 'object'
+    ? draft.lastKeyFields
+    : {};
+}
+
+watch(
+  [
+    entryMode,
+    snInput,
+    mfgOrder,
+    collectionMfgOrder,
+    collectionSpecName,
+    collectionSpecOptions,
+    resourceName,
+    info,
+    dataCollectionItems,
+    batchList,
+    lastKeyFields,
+  ],
+  scheduleDraftSave,
+  { deep: true, flush: 'post' },
+);
+
+const handlePageHide = () => persistDraftNow();
+const handleVisibilityChange = () => {
+  if (document.visibilityState === 'hidden') persistDraftNow();
+};
+
+onDeactivated(persistDraftNow);
+
+onBeforeUnmount(() => {
+  window.removeEventListener('pagehide', handlePageHide);
+  document.removeEventListener('visibilitychange', handleVisibilityChange);
+  persistDraftNow();
+});
 
 // 历史数据弹窗
 const historyDialogVisible = ref(false);
@@ -577,6 +759,7 @@ const handleSubmit = async () => {
   if (res && res.success && res.code === 0) {
     ElMessage.success(res.msg || '提交成功');
     await refreshCurrentQueryAfterSuccess();
+    persistDraftNow();
   } else {
     ElMessage.error((res && res.msg) || '执行失败');
   }
@@ -619,6 +802,7 @@ const handleBatchMoveStd = async () => {
     if (res && res.success && res.code === 0) {
       ElMessage.success(res.msg || '批量出站成功');
       await refreshCurrentQueryAfterSuccess();
+      persistDraftNow();
     } else {
       ElMessage.warning((res && res.msg) || '当前批次无法出站');
     }
@@ -628,6 +812,16 @@ const handleBatchMoveStd = async () => {
 };
 
 onMounted(async () => {
+  try {
+    await restoreDraft();
+  } catch (error) {
+    console.warn('批量进站页面草稿恢复失败', error);
+  } finally {
+    draftPersistenceReady = true;
+  }
+  window.addEventListener('pagehide', handlePageHide);
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+
   const res: any = await ContainersOperationMfgOrderQuery();
   if (res && res.success && res.code === 0) {
     mfgOrderOptions.value = res.content || [];
@@ -635,6 +829,17 @@ onMounted(async () => {
   const resourceRes: any = await ContainersOperationResourceQuery();
   if (resourceRes && resourceRes.success && resourceRes.code === 0) {
     resourceOptions.value = resourceRes.content || [];
+  }
+
+  if (collectionMfgOrder.value && collectionSpecOptions.value.length === 0) {
+    const specRes: any = await ContainersOperationMfgOrderCollectionSpecQuery(
+      collectionMfgOrder.value,
+    );
+    if (specRes && specRes.success && specRes.code === 0) {
+      collectionSpecOptions.value = [...(specRes.content || [])].sort(
+        (a: any, b: any) => Number(a.Sequence || 0) - Number(b.Sequence || 0),
+      );
+    }
   }
 });
 </script>
