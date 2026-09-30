@@ -25,6 +25,14 @@
             @keyup.enter="handleQuery"
           />
         </el-form-item>
+        <el-form-item label="VN">
+          <el-input
+            v-model="queryForm.VN"
+            clearable
+            placeholder="请输入VN"
+            @keyup.enter="handleQuery"
+          />
+        </el-form-item>
         <el-form-item label="结果">
           <el-select v-model="queryForm.InspectionResult" clearable placeholder="请选择结果">
             <el-option label="合格" value="合格" />
@@ -85,10 +93,10 @@
             @row-click="handleOrderRowClick"
           >
             <el-table-column type="index" label="序号" width="54" fixed="left" align="center" />
-            <el-table-column prop="MfgOrderName" label="工单" width="155" show-overflow-tooltip />
-            <el-table-column prop="VN" label="VN" width="125" show-overflow-tooltip />
-            <el-table-column prop="SNFrom" label="SN起" width="155" show-overflow-tooltip />
-            <el-table-column prop="SNTo" label="SN止" width="155" show-overflow-tooltip />
+            <el-table-column prop="MfgOrderName" label="工单" width="155" fixed="left" show-overflow-tooltip />
+            <el-table-column prop="VN" label="VN" width="125" fixed="left" show-overflow-tooltip />
+            <el-table-column prop="SNFrom" label="SN起" width="155" fixed="left" show-overflow-tooltip />
+            <el-table-column prop="SNTo" label="SN止" width="155" fixed="left" show-overflow-tooltip />
             <el-table-column prop="SNCount" label="SN数" width="80" align="right" />
             <el-table-column prop="Qty" label="工单总数" width="95" align="right" />
             <el-table-column prop="MfgOrderComplete" label="完成数" width="85" align="right" />
@@ -204,6 +212,7 @@ const {
 const emptyQuery = () => ({
   MfgOrderName: "",
   SN: "",
+  VN: "",
   InspectionResult: "",
   OperatorTimeFrom: "",
   OperatorTimeTo: "",
@@ -242,6 +251,7 @@ function buildQueryPayload() {
   const payload = {
     MfgOrderName: queryForm.MfgOrderName.trim(),
     SN: queryForm.SN.trim(),
+    VN: queryForm.VN.trim(),
     InspectionResult: queryForm.InspectionResult,
     OperatorTimeFrom: queryForm.OperatorTimeFrom,
     OperatorTimeTo: queryForm.OperatorTimeTo,

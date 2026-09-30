@@ -117,6 +117,12 @@
           show-overflow-tooltip
         />
         <el-table-column
+          prop="VN"
+          label="VN"
+          min-width="120"
+          show-overflow-tooltip
+        />
+        <el-table-column
           prop="InboundQty"
           label="入库数量"
           width="80"

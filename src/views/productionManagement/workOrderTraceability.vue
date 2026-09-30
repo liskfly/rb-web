@@ -18,6 +18,14 @@
             @keyup.enter="handleQuery"
           />
         </el-form-item>
+        <el-form-item label="VN">
+          <el-input
+            v-model="queryForm.VN"
+            clearable
+            placeholder="请输入VN"
+            @keyup.enter="handleQuery"
+          />
+        </el-form-item>
         <el-form-item label="存货代码">
           <el-select-v2
             v-model="queryForm.InvAddCode"
@@ -173,6 +181,7 @@
               :prop="column.prop"
               :label="column.label"
               :width="column.width"
+              :fixed="column.fixed"
               show-overflow-tooltip
             >
               <template #default="scope">
@@ -360,7 +369,12 @@ import {
 } from "@/api/operate";
 
 type Row = Record<string, any>;
-type Column = { prop: string; label: string; width?: number };
+type Column = {
+  prop: string;
+  label: string;
+  width?: number;
+  fixed?: "left" | "right";
+};
 type SelectOption = { label: string; value: string };
 type PrimaryTab = "containers" | "bom" | "picking" | "confirm" | "completion";
 type LotTab = "move" | "inspection" | "consume";
@@ -378,6 +392,7 @@ const {
 const emptyQuery = () => ({
   MfgOrderName: "",
   SN: "",
+  VN: "",
   ProductName: "",
   PlannedStartDateFrom: "",
   PlannedStartDateTo: "",
@@ -458,9 +473,9 @@ const pagedOrderRows = computed(() => {
 const panelBodyStyle = { padding: "0 10px 10px", height: "calc(100% - 49px)" };
 
 const orderColumns: Column[] = [
-  { prop: "MfgOrderName", label: "工单号", width: 150 },
-  { prop: "VN", label: "VN", width: 140 },
-  { prop: "SNRange", label: "SN码范围", width: 260 },
+  { prop: "MfgOrderName", label: "工单号", width: 150, fixed: "left" },
+  { prop: "VN", label: "VN", width: 140, fixed: "left" },
+  { prop: "SNRange", label: "SN码范围", width: 260, fixed: "left" },
   { prop: "OrderStatusName", label: "状态", width: 100 },
   { prop: "Qty", label: "总数量", width: 90 },
   { prop: "MfgOrderComplete", label: "完成数量", width: 90 },
@@ -483,7 +498,10 @@ const orderColumns: Column[] = [
 const primaryColumnMap: Record<PrimaryTab, Column[]> = {
   containers: [
     { prop: "MfgOrderName", label: "工单号", width: 150 },
-    { prop: "SN", label: "SN", width: 170 },
+    { prop: "SN", label: "SN码", width: 170 },
+    { prop: "SpecName", label: "当前工序", width: 120 },
+    { prop: "InProcess", label: "在制", width: 80 },
+    { prop: "ResourceName", label: "设备", width: 120 },
     { prop: "Qty", label: "数量", width: 80 },
     { prop: "Status", label: "状态", width: 100 },
     { prop: "UOMName", label: "单位", width: 80 },
@@ -494,10 +512,7 @@ const primaryColumnMap: Record<PrimaryTab, Column[]> = {
     { prop: "ProductTypeDesc", label: "类型描述", width: 110 },
     { prop: "ProductFamilyName", label: "产品型号", width: 120 },
     { prop: "ProductFamilyDesc", label: "型号描述", width: 130 },
-    { prop: "SpecName", label: "当前工序", width: 120 },
     { prop: "CreateTime", label: "开批时间", width: 160 },
-    { prop: "InProcess", label: "在制", width: 80 },
-    { prop: "ResourceName", label: "设备", width: 120 },
   ],
   bom: [
     { prop: "MfgOrderName", label: "工单号", width: 150 },
@@ -516,34 +531,34 @@ const primaryColumnMap: Record<PrimaryTab, Column[]> = {
     { prop: "UOMName", label: "单位", width: 80 },
   ],
   picking: [
+    { prop: "ProductDesc", label: "物料描述", width: 160 },
+    { prop: "VN", label: "VN", width: 120 },
+    { prop: "Operator", label: "领料人", width: 100 },
+    { prop: "WareHouseCode", label: "仓库", width: 110 },
+    { prop: "OperationTime", label: "领料时间", width: 160 },
     { prop: "PickingOrderNo", label: "领料单号", width: 150 },
     { prop: "MfgOrderName", label: "工单号", width: 150 },
     { prop: "ProductName", label: "物料编码", width: 140 },
-    { prop: "ProductDesc", label: "物料描述", width: 160 },
-    { prop: "VN", label: "VN", width: 120 },
     { prop: "ProductFamilyName", label: "产品型号", width: 120 },
     { prop: "ProductFamilyDesc", label: "型号描述", width: 130 },
-    { prop: "Operator", label: "领料人", width: 100 },
-    { prop: "OperationTime", label: "领料时间", width: 160 },
-    { prop: "WareHouseCode", label: "仓库", width: 110 },
     { prop: "Qty", label: "数量", width: 90 },
     { prop: "Remark", label: "备注", width: 160 },
   ],
   confirm: [
-    { prop: "MfgOrderName", label: "工单号", width: 150 },
-    { prop: "ProductName", label: "物料编码", width: 140 },
     { prop: "ProductDesc", label: "物料描述", width: 160 },
     { prop: "VN", label: "VN", width: 120 },
+    { prop: "BarCode", label: "条码", width: 170 },
+    { prop: "Qty", label: "数量", width: 90 },
+    { prop: "Status", label: "状态", width: 100 },
+    { prop: "MfgOrderName", label: "工单号", width: 150 },
+    { prop: "ProductName", label: "物料编码", width: 140 },
     { prop: "ProductFamilyName", label: "产品型号", width: 120 },
     { prop: "ProductFamilyDesc", label: "型号描述", width: 130 },
     { prop: "Batch", label: "批次", width: 130 },
-    { prop: "BarCode", label: "条码", width: 170 },
     { prop: "UomName", label: "单位", width: 80 },
-    { prop: "Qty", label: "数量", width: 90 },
     { prop: "ConfirmedBy", label: "确收人", width: 100 },
     { prop: "ConfirmedTime", label: "确收时间", width: 160 },
     { prop: "PickingOrderNumber", label: "领料单号", width: 150 },
-    { prop: "Status", label: "状态", width: 100 },
   ],
   completion: [
     { prop: "MfgOrder", label: "工单号", width: 150 },
@@ -569,6 +584,11 @@ const primaryColumnMap: Record<PrimaryTab, Column[]> = {
 const lotColumnMap: Record<LotTab, Column[]> = {
   move: [
     { prop: "SN", label: "SN", width: 170 },
+    { prop: "VN", label: "VN", width: 120 },
+    { prop: "SpecName", label: "工序", width: 120 },
+    { prop: "ResourceName", label: "设备", width: 120 },
+    { prop: "TxnServiceName", label: "事务", width: 120 },
+    { prop: "TxnDate", label: "时间", width: 160 },
     { prop: "Qty", label: "数量", width: 80 },
     { prop: "Status", label: "状态", width: 100 },
     { prop: "UOMName", label: "单位", width: 80 },
@@ -579,13 +599,10 @@ const lotColumnMap: Record<LotTab, Column[]> = {
     { prop: "ProductTypeDesc", label: "类型描述", width: 110 },
     { prop: "ProductFamilyName", label: "产品型号", width: 120 },
     { prop: "ProductFamilyDesc", label: "型号描述", width: 130 },
-    { prop: "SpecName", label: "工序", width: 120 },
-    { prop: "TxnDate", label: "时间", width: 160 },
-    { prop: "ResourceName", label: "设备", width: 120 },
-    { prop: "TxnServiceName", label: "事务", width: 120 },
     { prop: "MfgOrderName", label: "工单号", width: 150 },
   ],
   inspection: [
+    { prop: "VN", label: "VN", width: 120 },
     { prop: "SN", label: "SN", width: 170 },
     { prop: "ProcessName", label: "工序", width: 120 },
     { prop: "OperatorTime", label: "操作时间", width: 160 },
@@ -602,6 +619,7 @@ const lotColumnMap: Record<LotTab, Column[]> = {
     { prop: "MfgOrderName", label: "工单号", width: 150 },
   ],
   consume: [
+    { prop: "VN", label: "VN", width: 120 },
     { prop: "SN", label: "SN", width: 170 },
     { prop: "Qty", label: "数量", width: 80 },
     { prop: "Status", label: "状态", width: 100 },
@@ -640,24 +658,7 @@ const consumeDetailColumns: Column[] = [
   { prop: "QtyRequired", label: "需求数", width: 90 },
 ];
 
-const primaryColumns = computed(() => {
-  const columns = primaryColumnMap[currentTab.value];
-  const priority = ["VN", "SN", "Status"];
-
-  return [...columns]
-    .sort((left, right) => {
-      const leftIndex = priority.indexOf(left.prop);
-      const rightIndex = priority.indexOf(right.prop);
-      const leftOrder = leftIndex === -1 ? priority.length : leftIndex;
-      const rightOrder = rightIndex === -1 ? priority.length : rightIndex;
-      return leftOrder - rightOrder;
-    })
-    .map((column) => {
-      if (column.prop === "VN") return { ...column, label: "VN" };
-      if (column.prop === "SN") return { ...column, label: "SN码" };
-      return column;
-    });
-});
+const primaryColumns = computed(() => primaryColumnMap[currentTab.value]);
 const lotColumns = computed(() => lotColumnMap[lotTab.value]);
 const showLotDetail = computed(() => currentTab.value === "containers" && Boolean(currentSN.value));
 const showConsumeDetail = computed(
