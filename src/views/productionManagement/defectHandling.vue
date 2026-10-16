@@ -68,7 +68,7 @@
           <el-table-column prop="Spec" label="工序" min-width="100" show-overflow-tooltip />
           <el-table-column prop="SN" label="不良品SN" min-width="150" show-overflow-tooltip />
           <el-table-column prop="QCNGCodes" label="不良代码/原因" min-width="220" show-overflow-tooltip />
-          <el-table-column prop="CreateUser" label="创建人" width="100" />
+          <el-table-column prop="CreateUser" label="创建人" width="160" />
           <el-table-column prop="CreateTime" label="创建时间" width="170" />
           <!-- 不良处理列 -->
           <el-table-column label="不良处理" width="110" fixed="right" align="center">
@@ -96,7 +96,7 @@
               <span>{{ scope.row.ProcessInfo || '-' }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="UpdateUser" label="处理人" width="100">
+          <el-table-column prop="UpdateUser" label="处理人" width="160">
             <template #default="scope">
               <span>{{ scope.row.UpdateUser || '-' }}</span>
             </template>

@@ -40,7 +40,7 @@
             <el-tag effect="light" v-if="scope.row.Status == 3" type="info">其他</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="UpdateBy" label="更新人" width="150" />
+        <el-table-column prop="UpdateBy" label="更新人" width="160" />
         <el-table-column prop="UpdateOn" label="更新时间" width="150" />
         <el-table-column prop="LastCalibrationTime" label="已校准日期" width="150" />
 
@@ -66,7 +66,7 @@
       </div>
       <el-table :data="tableData1" border :height="tableHeight1" style="width: 100%" size="small" >
         <el-table-column prop="CreatedOn" label="校准日期" width="150" />
-        <el-table-column prop="CreatedBy" label="操作人" width="120" />
+        <el-table-column prop="CreatedBy" label="操作人" width="160" />
         <el-table-column prop="IsForce" label="强制更新" width="80" >
           <template #default="scope">
           <el-tag effect="light" v-if="scope.row.IsForce == false" type="primary">否</el-tag>
@@ -508,7 +508,7 @@ const columnData1 = reactive([
     text: true,
     prop: "CreatedBy",
     label: "操作人",
-    width: "120",
+    width: "160",
     // min: true,
     align: "1",
   },

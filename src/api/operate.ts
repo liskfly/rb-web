@@ -1068,6 +1068,15 @@ export function QueryCompletionInboundList(data: any) {
     })
 }
 
+/** FQC审核导出：按主查询条件导出全部单据的SN明细，并按VN汇总数量 */
+export function ExportFqcAudit(data: any) {
+    return request({
+        url: "/api/CompletionInbound/ExportFqcAudit",
+        method: "post",
+        data
+    })
+}
+
 /** 完工入库明细查询 */
 export function QueryCompletionInboundDetailList(data: any) {
     return request({
@@ -1320,6 +1329,38 @@ export function ContainersOperationBatchMoveStd(data: {
 }) {
     return request({
         url: "/api/ContainersOperation/BatchMoveStd",
+        method: "post",
+        data
+    })
+}
+
+export type SpecAttachmentUploadPayload = {
+    OperatorBy: string;
+    Items: Array<{
+        SN: string;
+        Specs: Array<{
+            SpecName: string;
+            Files: Array<{
+                FileName: string;
+                Base64String: string;
+            }>;
+        }>;
+    }>;
+};
+
+/** 单批次工序附件上传 */
+export function ContainerOperationUploadSpecAttachment(data: SpecAttachmentUploadPayload) {
+    return request({
+        url: "/api/ContainerOperation/UploadSpecAttachment",
+        method: "post",
+        data
+    })
+}
+
+/** 多批次工序附件统一上传 */
+export function ContainersOperationUploadSpecAttachment(data: SpecAttachmentUploadPayload) {
+    return request({
+        url: "/api/ContainersOperation/UploadSpecAttachment",
         method: "post",
         data
     })

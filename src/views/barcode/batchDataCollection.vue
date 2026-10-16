@@ -64,7 +64,7 @@
           </el-select>
         </div>
         <div class="flex items-center gap-2 flex-shrink-0">
-          <el-button type="primary" size="large" @click="handleSubmit">提交</el-button>
+          <el-button type="primary" size="large" :loading="submitLoading" @click="handleSubmit">提交</el-button>
           <el-button type="warning" size="large" :loading="batchMoveStdLoading" @click="handleBatchMoveStd">
             批量出站
           </el-button>
@@ -120,8 +120,23 @@
 
       <!-- ====== 操作区 ====== -->
       <div class="flex-1 bg-white rounded shadow-sm flex flex-col min-h-0">
-        <div class="h-[35px] flex items-center text-white bg-[#006487] px-3 flex-shrink-0">
+        <div class="h-[35px] flex items-center justify-between text-white bg-[#006487] px-3 flex-shrink-0">
           <span>操作区</span>
+          <div class="flex items-center gap-2">
+            <el-button size="small" :disabled="batchList.length === 0" @click="exportOperationExcel">
+              导出Excel
+            </el-button>
+            <el-button size="small" :disabled="batchList.length === 0" @click="openOperationExcelImport">
+              导入Excel
+            </el-button>
+            <input
+              ref="operationExcelInputRef"
+              class="hidden"
+              type="file"
+              accept=".xlsx,.xls"
+              @change="importOperationExcel"
+            />
+          </div>
         </div>
         <!-- 空状态 -->
         <div class="flex-1 p-3 flex flex-col min-h-0" v-if="batchList.length === 0">
@@ -187,6 +202,9 @@
                       {{ rowData.ContainerName }}
                     </div>
                     <div v-else-if="column.kind === 'history'" class="virtual-history-cell">
+                      <el-button type="success" plain size="small" @click="openAttachmentDialog(rowData)">
+                        上传附件{{ getAttachmentCount(rowData) ? `(${getAttachmentCount(rowData)})` : '' }}
+                      </el-button>
                       <el-button type="primary" size="small" @click="openHistory(rowData)">查看</el-button>
                     </div>
                     <template v-else-if="column.kind === 'data'">
@@ -221,6 +239,46 @@
         </div>
       </div>
     </div>
+
+    <!-- 工序附件 Dialog -->
+    <el-dialog
+      v-model="attachmentDialogVisible"
+      :title="`附件上传 - ${activeAttachmentSN || '-'}`"
+      draggable
+      width="620px"
+      :close-on-click-modal="false"
+      align-center
+    >
+      <div class="attachment-dialog-summary">
+        <span>当前工序：{{ activeAttachmentSpecName || '-' }}</span>
+        <span>单文件不大于 100MB，附件将在点击页面“提交”时统一上传</span>
+      </div>
+      <div class="mb-3">
+        <el-button type="primary" @click="openAttachmentFilePicker">选择附件</el-button>
+        <input
+          ref="attachmentFileInputRef"
+          class="hidden"
+          type="file"
+          multiple
+          @change="handleAttachmentFileChange"
+        />
+      </div>
+      <el-table v-if="activeAttachmentFiles.length > 0" :data="activeAttachmentFiles" size="small" border max-height="360">
+        <el-table-column prop="name" label="文件名" min-width="300" show-overflow-tooltip />
+        <el-table-column label="大小" width="110" align="right">
+          <template #default="scope">{{ formatAttachmentSize(scope.row.size) }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="80" align="center">
+          <template #default="scope">
+            <el-button type="danger" link @click="removeAttachment(scope.$index)">移除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-empty v-else description="暂未选择附件" :image-size="80" />
+      <template #footer>
+        <el-button type="primary" @click="attachmentDialogVisible = false">完成</el-button>
+      </template>
+    </el-dialog>
 
     <!-- 历史数据 Dialog -->
     <el-dialog v-model="historyDialogVisible" title="历史采集数据" draggable width="800px" :close-on-click-modal="false" align-center>
@@ -264,6 +322,7 @@ import {
   ContainersOperationResourceDetailQuery,
   ContainersOperationContainerOperationExecution,
   ContainersOperationBatchMoveStd,
+  ContainersOperationUploadSpecAttachment,
 } from "@/api/operate";
 import { useUserStoreWithOut } from '@/stores/modules/user';
 import { loadPageDraft, savePageDraft } from '@/utils/pageDraftStorage';
@@ -325,7 +384,398 @@ const dataCollectionItems = ref<any[]>([]);
 const batchList = ref<any[]>([]);
 const lastKeyFields = ref<any>({});
 const batchMoveStdLoading = ref(false);
+const submitLoading = ref(false);
 const batchInputValues = ref<Record<string, string>>({});
+const operationExcelInputRef = ref<HTMLInputElement>();
+const attachmentFileInputRef = ref<HTMLInputElement>();
+const attachmentDialogVisible = ref(false);
+const activeAttachmentSN = ref('');
+const activeAttachmentRow = ref<any>();
+
+type PendingSpecAttachment = {
+  name: string;
+  size: number;
+  lastModified: number;
+  file: File;
+};
+
+const MAX_ATTACHMENT_SIZE = 100 * 1024 * 1024;
+const specAttachmentsBySN = ref<Record<string, PendingSpecAttachment[]>>({});
+
+const getSpecNameForRow = (row: any) => String(
+  row?.SpecName || info.value.SpecName || lastKeyFields.value.SpecName || collectionSpecName.value || '',
+).trim();
+
+const activeAttachmentSpecName = computed(() => getSpecNameForRow(activeAttachmentRow.value));
+const activeAttachmentFiles = computed(
+  () => specAttachmentsBySN.value[activeAttachmentSN.value] || [],
+);
+
+const getAttachmentCount = (row: any) => {
+  const sn = String(row?.ContainerName || '').trim();
+  return specAttachmentsBySN.value[sn]?.length || 0;
+};
+
+const openAttachmentDialog = (row: any) => {
+  activeAttachmentSN.value = String(row?.ContainerName || '').trim();
+  activeAttachmentRow.value = row;
+  attachmentDialogVisible.value = true;
+};
+
+const openAttachmentFilePicker = () => {
+  attachmentFileInputRef.value?.click();
+};
+
+const handleAttachmentFileChange = (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const selectedFiles = Array.from(input.files || []);
+  input.value = '';
+  if (selectedFiles.length === 0 || !activeAttachmentSN.value) return;
+
+  const currentFiles = [...activeAttachmentFiles.value];
+  const existingNames = new Set(currentFiles.map(file => file.name));
+  const oversizedFiles: string[] = [];
+  const duplicateFiles: string[] = [];
+
+  selectedFiles.forEach((file) => {
+    if (file.size > MAX_ATTACHMENT_SIZE) {
+      oversizedFiles.push(file.name);
+      return;
+    }
+    if (existingNames.has(file.name)) {
+      duplicateFiles.push(file.name);
+      return;
+    }
+    currentFiles.push({
+      name: file.name,
+      size: file.size,
+      lastModified: file.lastModified,
+      file,
+    });
+    existingNames.add(file.name);
+  });
+
+  specAttachmentsBySN.value = {
+    ...specAttachmentsBySN.value,
+    [activeAttachmentSN.value]: currentFiles,
+  };
+
+  if (oversizedFiles.length > 0) {
+    ElMessage.error(`以下文件超过100MB，已跳过：${oversizedFiles.join('、')}`);
+  }
+  if (duplicateFiles.length > 0) {
+    ElMessage.warning(`以下同名附件已存在，已跳过：${duplicateFiles.join('、')}`);
+  }
+};
+
+const removeAttachment = (index: number) => {
+  const sn = activeAttachmentSN.value;
+  if (!sn) return;
+  const nextFiles = [...(specAttachmentsBySN.value[sn] || [])];
+  nextFiles.splice(index, 1);
+  const nextMap = { ...specAttachmentsBySN.value };
+  if (nextFiles.length > 0) {
+    nextMap[sn] = nextFiles;
+  } else {
+    delete nextMap[sn];
+  }
+  specAttachmentsBySN.value = nextMap;
+};
+
+const formatAttachmentSize = (size: number) => {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / 1024 / 1024).toFixed(1)} MB`;
+};
+
+const pruneSpecAttachments = () => {
+  const validSNs = new Set(
+    batchList.value.map((row: any) => String(row.ContainerName || '').trim()).filter(Boolean),
+  );
+  specAttachmentsBySN.value = Object.fromEntries(
+    Object.entries(specAttachmentsBySN.value).filter(([sn]) => validSNs.has(sn)),
+  );
+  if (activeAttachmentSN.value && !validSNs.has(activeAttachmentSN.value)) {
+    attachmentDialogVisible.value = false;
+    activeAttachmentSN.value = '';
+    activeAttachmentRow.value = undefined;
+  }
+};
+
+const fileToBase64 = (file: File) => new Promise<string>((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => {
+    const result = String(reader.result || '');
+    const separatorIndex = result.indexOf(',');
+    resolve(separatorIndex >= 0 ? result.slice(separatorIndex + 1) : result);
+  };
+  reader.onerror = () => reject(reader.error || new Error(`附件读取失败：${file.name}`));
+  reader.readAsDataURL(file);
+});
+
+const buildSpecAttachmentPayload = async () => {
+  pruneSpecAttachments();
+  const items = [];
+
+  for (const row of batchList.value) {
+    const sn = String(row.ContainerName || '').trim();
+    const files = specAttachmentsBySN.value[sn] || [];
+    if (files.length === 0) continue;
+
+    const specName = getSpecNameForRow(row);
+    if (!specName) {
+      throw new Error(`SN ${sn} 缺少当前工序，无法上传附件`);
+    }
+
+    items.push({
+      SN: sn,
+      Specs: [{
+        SpecName: specName,
+        Files: await Promise.all(files.map(async attachment => ({
+          FileName: attachment.name,
+          Base64String: await fileToBase64(attachment.file),
+        }))),
+      }],
+    });
+  }
+
+  return {
+    OperatorBy: draftUserName,
+    Items: items,
+  };
+};
+
+const operationExcelHeaders = computed(() => [
+  'SN码',
+  ...dataCollectionItems.value.map((item: any) => String(item.DataPointName || '').trim()),
+]);
+
+const getDuplicateCollectionNames = () => {
+  const names = operationExcelHeaders.value.slice(1).filter(Boolean);
+  return Array.from(new Set(names.filter((name, index) => names.indexOf(name) !== index)));
+};
+
+const formatExcelFileTime = () => {
+  const now = new Date();
+  const part = (value: number) => String(value).padStart(2, '0');
+  return `${now.getFullYear()}${part(now.getMonth() + 1)}${part(now.getDate())}_${part(now.getHours())}${part(now.getMinutes())}${part(now.getSeconds())}`;
+};
+
+const exportOperationExcel = async () => {
+  if (batchList.value.length === 0) {
+    ElMessage.warning('操作区没有可导出的数据');
+    return;
+  }
+
+  const duplicateNames = getDuplicateCollectionNames();
+  if (duplicateNames.length > 0) {
+    ElMessage.error(`采集项名称重复，无法生成可回填模板：${duplicateNames.join('、')}`);
+    return;
+  }
+
+  try {
+    const XLSX = await import('xlsx');
+    const rows = batchList.value.map((row: any) => [
+      String(row.ContainerName || ''),
+      ...dataCollectionItems.value.map((_: any, index: number) => row.values?.[index] ?? ''),
+    ]);
+    const worksheet = XLSX.utils.aoa_to_sheet([operationExcelHeaders.value, ...rows]);
+    worksheet['!cols'] = operationExcelHeaders.value.map((header, index) => ({
+      wch: index === 0 ? 24 : Math.max(16, Math.min(32, Array.from(header).length * 2 + 6)),
+    }));
+
+    for (let rowIndex = 1; rowIndex <= rows.length; rowIndex++) {
+      const address = XLSX.utils.encode_cell({ r: rowIndex, c: 0 });
+      if (worksheet[address]) {
+        worksheet[address].t = 's';
+        worksheet[address].z = '@';
+      }
+    }
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, '操作区数据');
+    const nameParts = [
+      '批量进站操作区',
+      info.value.MfgOrderName,
+      info.value.SpecName,
+      formatExcelFileTime(),
+    ].filter(Boolean);
+    const fileName = nameParts.join('_').replace(/[\\/:*?"<>|]/g, '_');
+    XLSX.writeFile(workbook, `${fileName}.xlsx`);
+  } catch (error) {
+    console.error('操作区Excel导出失败', error);
+    ElMessage.error('Excel导出失败，请稍后重试');
+  }
+};
+
+const openOperationExcelImport = () => {
+  operationExcelInputRef.value?.click();
+};
+
+const normalizeImportedValue = (item: any, rawValue: any) => {
+  const text = String(rawValue ?? '').trim();
+  if (!text) return { valid: true, value: '' };
+
+  if (item.Type === 'Boolean') {
+    const normalized = text.toLowerCase();
+    const trueValues = new Set([
+      'true', '1', '是', '合格', String(item.BooleanTrue || '').trim().toLowerCase(),
+    ].filter(Boolean));
+    const falseValues = new Set([
+      'false', '0', '否', '不合格', String(item.BooleanFalse || '').trim().toLowerCase(),
+    ].filter(Boolean));
+    if (trueValues.has(normalized)) return { valid: true, value: 'true' };
+    if (falseValues.has(normalized)) return { valid: true, value: 'false' };
+    return { valid: false, value: text, message: '应填写 true/false、是/否或合格/不合格' };
+  }
+
+  if (item.Type === 'Integer' && !/^-?\d+$/.test(text)) {
+    return { valid: false, value: text, message: '应填写整数' };
+  }
+  if (item.Type === 'Float' && !/^-?(?:\d+(?:\.\d*)?|\.\d+)$/.test(text)) {
+    return { valid: false, value: text, message: '应填写数字' };
+  }
+  return { valid: true, value: normalizeCellValue(item.Type, text) };
+};
+
+const importOperationExcel = async (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+
+  if (!/\.(xlsx|xls)$/i.test(file.name)) {
+    ElMessage.error('请选择 xlsx 或 xls 文件');
+    return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    ElMessage.error('Excel文件不能超过10MB');
+    return;
+  }
+
+  const duplicateNames = getDuplicateCollectionNames();
+  if (duplicateNames.length > 0) {
+    ElMessage.error(`当前采集项名称重复，无法按列名导入：${duplicateNames.join('、')}`);
+    return;
+  }
+
+  try {
+    const XLSX = await import('xlsx');
+    const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = sheetName ? workbook.Sheets[sheetName] : undefined;
+    if (!worksheet) {
+      ElMessage.error('Excel中没有可读取的工作表');
+      return;
+    }
+
+    const excelRows = XLSX.utils.sheet_to_json<any[]>(worksheet, {
+      header: 1,
+      defval: '',
+      raw: true,
+    });
+    if (excelRows.length < 2) {
+      ElMessage.error('Excel中没有可导入的数据');
+      return;
+    }
+
+    const headers = excelRows[0].map((value: any) => String(value ?? '').trim());
+    const duplicateHeaders = Array.from(new Set(
+      headers.filter((header: string, index: number) => header && headers.indexOf(header) !== index),
+    ));
+    if (duplicateHeaders.length > 0) {
+      ElMessage.error(`Excel表头存在重复列：${duplicateHeaders.join('、')}`);
+      return;
+    }
+
+    const snColumnIndex = headers.findIndex((header: string) => header === 'SN码' || header === 'SN');
+    if (snColumnIndex < 0) {
+      ElMessage.error('Excel缺少“SN码”列，请使用当前页面导出的模板');
+      return;
+    }
+
+    const itemColumnIndexes = dataCollectionItems.value.map((item: any) =>
+      headers.indexOf(String(item.DataPointName || '').trim()),
+    );
+    const missingColumns = dataCollectionItems.value
+      .filter((_: any, index: number) => itemColumnIndexes[index] < 0)
+      .map((item: any) => item.DataPointName);
+    if (missingColumns.length > 0) {
+      ElMessage.error(`Excel缺少采集项列：${missingColumns.join('、')}`);
+      return;
+    }
+
+    const pendingRows = new Map<string, string[]>();
+    const duplicateSNs = new Set<string>();
+    const typeErrors: string[] = [];
+
+    excelRows.slice(1).forEach((excelRow: any[], index: number) => {
+      const excelRowNumber = index + 2;
+      const containerName = String(excelRow[snColumnIndex] ?? '').trim();
+      if (!containerName) return;
+      if (pendingRows.has(containerName)) duplicateSNs.add(containerName);
+
+      const values = dataCollectionItems.value.map((item: any, itemIndex: number) => {
+        const normalized = normalizeImportedValue(item, excelRow[itemColumnIndexes[itemIndex]]);
+        if (!normalized.valid && typeErrors.length < 20) {
+          typeErrors.push(`第${excelRowNumber}行「${item.DataPointName}」${normalized.message}`);
+        }
+        return normalized.value;
+      });
+      pendingRows.set(containerName, values);
+    });
+
+    if (duplicateSNs.size > 0) {
+      ElMessage.error(`Excel存在重复SN码：${Array.from(duplicateSNs).slice(0, 10).join('、')}`);
+      return;
+    }
+    if (typeErrors.length > 0) {
+      ElMessage.error(`Excel数据格式有误：${typeErrors.join('；')}`);
+      return;
+    }
+    if (pendingRows.size === 0) {
+      ElMessage.error('Excel中没有有效的SN数据');
+      return;
+    }
+
+    const currentRows = new Map(
+      batchList.value.map((row: any) => [String(row.ContainerName || '').trim(), row]),
+    );
+    const unknownSNs: string[] = [];
+    let importedCount = 0;
+    let validationErrorCount = 0;
+    pendingRows.forEach((values, containerName) => {
+      const targetRow: any = currentRows.get(containerName);
+      if (!targetRow) {
+        unknownSNs.push(containerName);
+        return;
+      }
+      values.forEach((value, itemIndex) => {
+        targetRow.values[itemIndex] = value;
+        validateCell(targetRow, itemIndex);
+        if (targetRow._errors?.[itemIndex]?.error) validationErrorCount += 1;
+      });
+      importedCount += 1;
+    });
+
+    if (importedCount === 0) {
+      ElMessage.error('Excel中的SN码均不在当前操作区，未导入任何数据');
+      return;
+    }
+    if (unknownSNs.length > 0 || validationErrorCount > 0) {
+      const details = [
+        unknownSNs.length > 0 ? `${unknownSNs.length}个SN不在当前操作区，已跳过` : '',
+        validationErrorCount > 0 ? `${validationErrorCount}个单元格未通过必填或范围校验` : '',
+      ].filter(Boolean);
+      ElMessage.warning(`已回填${importedCount}条；${details.join('；')}`);
+    } else {
+      ElMessage.success(`成功回填${importedCount}条操作区数据`);
+    }
+  } catch (error) {
+    console.error('操作区Excel导入失败', error);
+    ElMessage.error('Excel读取失败，请确认文件未损坏并使用当前页面导出的模板');
+  }
+};
 
 const normalizeCellValue = (type: string, value: any) => {
   if (type === 'Integer') {
@@ -347,17 +797,19 @@ const batchSetBoolean = (idx: number, value: any) => {
 const validateCell = (row: any, idx: number) => {
   const item = dataCollectionItems.value[idx];
   const val = row.values[idx];
+  const hasLowerLimit = item.LowerLimit !== null && item.LowerLimit !== undefined && item.LowerLimit !== '';
+  const hasUpperLimit = item.UpperLimit !== null && item.UpperLimit !== undefined && item.UpperLimit !== '';
   row._errors[idx] = { error: false, type: '', msg: '' };
   if (item.IsRequired && (!val || String(val).trim() === '')) {
     row._errors[idx] = { error: true, type: 'required', msg: `${item.DataPointName} 为必填项` };
     return;
   }
-  if (val && !isNaN(Number(val)) && (item.LowerLimit || item.UpperLimit)) {
+  if (val !== '' && val !== null && val !== undefined && !isNaN(Number(val)) && (hasLowerLimit || hasUpperLimit)) {
     const num = Number(val);
-    if (item.LowerLimit && num < Number(item.LowerLimit)) {
+    if (hasLowerLimit && num < Number(item.LowerLimit)) {
       row._errors[idx] = { error: true, type: 'range', msg: `不能小于 ${item.LowerLimit}` };
     }
-    if (item.UpperLimit && num > Number(item.UpperLimit)) {
+    if (hasUpperLimit && num > Number(item.UpperLimit)) {
       row._errors[idx] = { error: true, type: 'range', msg: `不能大于 ${item.UpperLimit}` };
     }
   }
@@ -396,7 +848,7 @@ const operationColumns = computed<OperationColumn[]>(() => [
     key: 'history',
     dataKey: 'history',
     title: '查看历史',
-    width: 90,
+    width: 180,
     fixed: TableV2FixedDir.RIGHT,
     align: 'center',
     kind: 'history',
@@ -631,6 +1083,13 @@ const handleQuery = async () => {
   if (res && res.success && res.code === 0 && res.content) {
     const d = res.content;
     const newKeys = getKeyFields(d);
+    const hasExistingContext = Object.keys(lastKeyFields.value).length > 0;
+    if (hasExistingContext && !keysMatch(lastKeyFields.value, newKeys)) {
+      specAttachmentsBySN.value = {};
+      attachmentDialogVisible.value = false;
+      activeAttachmentSN.value = '';
+      activeAttachmentRow.value = undefined;
+    }
     const newItems = d.DataCollectionItems || [];
     const newBatches = (d.BatchList || []).map((b: any) => ({
       ...b,
@@ -667,6 +1126,7 @@ const handleQuery = async () => {
         });
       }
     }
+    pruneSpecAttachments();
     lastKeyFields.value = newKeys;
   } else {
     ElMessage.error((res && res.msg) || '查询失败');
@@ -682,6 +1142,10 @@ const clearOperationData = () => {
   batchList.value = [];
   dataCollectionItems.value = [];
   lastKeyFields.value = {};
+  specAttachmentsBySN.value = {};
+  attachmentDialogVisible.value = false;
+  activeAttachmentSN.value = '';
+  activeAttachmentRow.value = undefined;
 };
 
 const refreshCurrentQueryAfterSuccess = async () => {
@@ -738,30 +1202,59 @@ const handleSubmit = async () => {
       return;
     }
   }
-  const params = {
-    TaskName: lastKeyFields.value.TaskName || '',
-    TaskListName: lastKeyFields.value.TaskListName || '',
-    DataCollectionDefId: lastKeyFields.value.DataCollectionDefId || '',
-    DataCollectionDefName: lastKeyFields.value.DataCollectionDefName || '',
-    ServiceName: lastKeyFields.value.ServiceName || '',
-    ResourceName: lastKeyFields.value.ResourceName || '',
-    reBornContainerOperations: batchList.value.map((b: any) => ({
-      ContainerName: b.ContainerName,
-      operationEntityDataCollectionLists: dataCollectionItems.value.map((item: any, idx: number) => ({
-        DataPointName: item.DataPointName,
-        DataType: item.Type,
-        DataValue: String(b.values[idx] ?? ''),
+  submitLoading.value = true;
+  let attachmentsUploaded = false;
+  try {
+    pruneSpecAttachments();
+    const hasPendingAttachments = Object.values(specAttachmentsBySN.value)
+      .some(files => files.length > 0);
+    if (hasPendingAttachments && !draftUserName) {
+      ElMessage.error('未获取到当前操作人，无法上传附件');
+      return;
+    }
+    const attachmentParams = await buildSpecAttachmentPayload();
+    if (attachmentParams.Items.length > 0) {
+      const attachmentRes: any = await ContainersOperationUploadSpecAttachment(attachmentParams);
+      if (!attachmentRes || !attachmentRes.success || attachmentRes.code !== 0) {
+        ElMessage.error((attachmentRes && attachmentRes.msg) || '附件上传失败，已取消本次提交');
+        return;
+      }
+      attachmentsUploaded = true;
+      specAttachmentsBySN.value = {};
+      attachmentDialogVisible.value = false;
+    }
+
+    const params = {
+      TaskName: lastKeyFields.value.TaskName || '',
+      TaskListName: lastKeyFields.value.TaskListName || '',
+      DataCollectionDefId: lastKeyFields.value.DataCollectionDefId || '',
+      DataCollectionDefName: lastKeyFields.value.DataCollectionDefName || '',
+      ServiceName: lastKeyFields.value.ServiceName || '',
+      ResourceName: lastKeyFields.value.ResourceName || '',
+      reBornContainerOperations: batchList.value.map((b: any) => ({
+        ContainerName: b.ContainerName,
+        operationEntityDataCollectionLists: dataCollectionItems.value.map((item: any, idx: number) => ({
+          DataPointName: item.DataPointName,
+          DataType: item.Type,
+          DataValue: String(b.values[idx] ?? ''),
+        })),
       })),
-    })),
-    OperatorBy: userStore.getUserInfo,
-  };
-  const res: any = await ContainersOperationContainerOperationExecution(params);
-  if (res && res.success && res.code === 0) {
-    ElMessage.success(res.msg || '提交成功');
-    await refreshCurrentQueryAfterSuccess();
-    persistDraftNow();
-  } else {
-    ElMessage.error((res && res.msg) || '执行失败');
+      OperatorBy: userStore.getUserInfo,
+    };
+    const res: any = await ContainersOperationContainerOperationExecution(params);
+    if (res && res.success && res.code === 0) {
+      ElMessage.success(attachmentsUploaded ? '提交成功，附件已上传' : (res.msg || '提交成功'));
+      await refreshCurrentQueryAfterSuccess();
+      persistDraftNow();
+    } else {
+      const prefix = attachmentsUploaded ? '附件已上传，但' : '';
+      ElMessage.error(`${prefix}${(res && res.msg) || '执行失败'}`);
+    }
+  } catch (error) {
+    console.error('批量进站提交失败', error);
+    ElMessage.error(error instanceof Error ? error.message : '提交失败，请稍后重试');
+  } finally {
+    submitLoading.value = false;
   }
 };
 
@@ -930,7 +1423,16 @@ onMounted(async () => {
 .virtual-history-cell {
   display: flex;
   width: 100%;
+  gap: 8px;
   justify-content: center;
+}
+
+.attachment-dialog-summary {
+  display: flex;
+  margin-bottom: 12px;
+  flex-direction: column;
+  gap: 4px;
+  color: #606266;
 }
 
 .virtual-input-cell {

@@ -100,13 +100,16 @@
         <div class="flex-1 p-3 flex flex-col min-h-0">
 
           <!-- ===== UserDataCollectionDef ===== -->
-          <template v-if="serviceType === 'UserDataCollectionDef' && dataCollectionList.length > 0">
+          <template v-if="serviceType === 'UserDataCollectionDef'">
             <div class="flex justify-between mb-2 flex-shrink-0">
               <div class="flex items-center gap-2">
                 <el-button type="warning" size="small" @click="handleHistoryQuery">查看历史采集数据</el-button>
                 <el-button v-if="hasBatchDataCollection" type="success" size="small" @click="push('/dipWork/batchDataCollection')">批量数据采集</el-button>
+                <el-button type="primary" plain size="small" @click="openAttachmentUpload">
+                  附件上传{{ attachmentFiles.length ? `(${attachmentFiles.length})` : '' }}
+                </el-button>
               </div>
-              <el-button type="primary" size="small" @click="submitDataCollection">提交采集数据</el-button>
+              <el-button type="primary" size="small" :loading="dataCollectionSubmitting" @click="submitDataCollection">提交采集数据</el-button>
             </div>
             <el-table :data="dataCollectionList" size="small" border style="width:100%" height="100%">
               <el-table-column type="index" label="序号" width="45" align="center" />
@@ -273,6 +276,47 @@
     </el-tabs>
     <el-empty v-if="historyData.length === 0" description="暂无历史采集数据" />
   </el-dialog>
+
+  <!-- 当前SN工序附件上传 Dialog -->
+  <el-dialog
+    v-model="attachmentDialogVisible"
+    title="附件上传"
+    draggable
+    width="620px"
+    :close-on-click-modal="false"
+    align-center
+  >
+    <div class="attachment-dialog-summary">
+      <span>SN：{{ info.ContainerName || '-' }}</span>
+      <span>当前工序：{{ info.SpecName || '-' }}</span>
+      <span>单文件不大于 100MB，附件将在点击“提交采集数据”时一起上传</span>
+    </div>
+    <div class="mb-3">
+      <el-button type="primary" @click="openAttachmentFilePicker">选择附件</el-button>
+      <input
+        ref="attachmentFileInputRef"
+        class="hidden"
+        type="file"
+        multiple
+        @change="handleAttachmentFileChange"
+      />
+    </div>
+    <el-table v-if="attachmentFiles.length > 0" :data="attachmentFiles" size="small" border max-height="360">
+      <el-table-column prop="name" label="文件名" min-width="300" show-overflow-tooltip />
+      <el-table-column label="大小" width="110" align="right">
+        <template #default="scope">{{ formatAttachmentSize(scope.row.size) }}</template>
+      </el-table-column>
+      <el-table-column label="操作" width="80" align="center">
+        <template #default="scope">
+          <el-button type="danger" link @click="removeAttachment(scope.$index)">移除</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+    <el-empty v-else description="暂未选择附件" :image-size="80" />
+    <template #footer>
+      <el-button type="primary" @click="attachmentDialogVisible = false">完成</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
@@ -281,7 +325,7 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import { useRouter } from "vue-router";
 import { useAppStore } from "@/stores/modules/app";
 import { useUserStoreWithOut } from "@/stores/modules/user";
-import { WorkCenterQuery, MfgLineQuery, ContainerOperationQuery, ContainerOperationExecution, ComponentIssueSNQuery, ContainerDataPointHistoryQuery } from "@/api/operate";
+import { WorkCenterQuery, MfgLineQuery, ContainerOperationQuery, ContainerOperationExecution, ComponentIssueSNQuery, ContainerDataPointHistoryQuery, ContainerOperationUploadSpecAttachment } from "@/api/operate";
 
 const router = useRouter();
 const { push } = router;
@@ -336,6 +380,132 @@ const dataCollectionList = ref<any[]>([]);
 const treeComponentData = ref<any[]>([]);
 const moveInResource = ref("");
 const resourceOptions = ref<any[]>([]);
+
+type StationAttachment = {
+  name: string;
+  size: number;
+  file: File;
+};
+
+const MAX_ATTACHMENT_SIZE = 100 * 1024 * 1024;
+const attachmentDialogVisible = ref(false);
+const dataCollectionSubmitting = ref(false);
+const attachmentFileInputRef = ref<HTMLInputElement>();
+const attachmentFiles = ref<StationAttachment[]>([]);
+
+const resolveOperatorName = () => {
+  const loginName = localStorage.getItem('LOGINNAME');
+  if (loginName) return loginName.trim();
+
+  const userInfo = userStore.getUserInfo;
+  if (typeof userInfo === 'string' || typeof userInfo === 'number') {
+    return String(userInfo).trim();
+  }
+  if (userInfo && typeof userInfo === 'object') {
+    return String(
+      userInfo.EmployeeName || userInfo.UserName || userInfo.userName || userInfo.Account || '',
+    ).trim();
+  }
+  return '';
+};
+
+const clearAttachmentSelection = () => {
+  attachmentFiles.value = [];
+  attachmentDialogVisible.value = false;
+  if (attachmentFileInputRef.value) attachmentFileInputRef.value.value = '';
+};
+
+const openAttachmentUpload = () => {
+  if (!info.value.ContainerName) {
+    ElMessage.warning('请先扫描条码');
+    return;
+  }
+  if (!info.value.SpecName) {
+    ElMessage.warning('当前数据缺少工序，无法上传附件');
+    return;
+  }
+  attachmentDialogVisible.value = true;
+};
+
+const openAttachmentFilePicker = () => {
+  attachmentFileInputRef.value?.click();
+};
+
+const handleAttachmentFileChange = (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const selectedFiles = Array.from(input.files || []);
+  input.value = '';
+  if (selectedFiles.length === 0) return;
+
+  const nextFiles = [...attachmentFiles.value];
+  const existingNames = new Set(nextFiles.map(file => file.name));
+  const oversizedFiles: string[] = [];
+  const duplicateFiles: string[] = [];
+
+  selectedFiles.forEach((file) => {
+    if (file.size > MAX_ATTACHMENT_SIZE) {
+      oversizedFiles.push(file.name);
+      return;
+    }
+    if (existingNames.has(file.name)) {
+      duplicateFiles.push(file.name);
+      return;
+    }
+    nextFiles.push({ name: file.name, size: file.size, file });
+    existingNames.add(file.name);
+  });
+
+  attachmentFiles.value = nextFiles;
+  if (oversizedFiles.length > 0) {
+    ElMessage.error(`以下文件超过100MB，已跳过：${oversizedFiles.join('、')}`);
+  }
+  if (duplicateFiles.length > 0) {
+    ElMessage.warning(`以下同名附件已存在，已跳过：${duplicateFiles.join('、')}`);
+  }
+};
+
+const removeAttachment = (index: number) => {
+  attachmentFiles.value.splice(index, 1);
+};
+
+const formatAttachmentSize = (size: number) => {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / 1024 / 1024).toFixed(1)} MB`;
+};
+
+const fileToBase64 = (file: File) => new Promise<string>((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => {
+    const result = String(reader.result || '');
+    const separatorIndex = result.indexOf(',');
+    resolve(separatorIndex >= 0 ? result.slice(separatorIndex + 1) : result);
+  };
+  reader.onerror = () => reject(reader.error || new Error(`附件读取失败：${file.name}`));
+  reader.readAsDataURL(file);
+});
+
+const buildAttachmentUploadPayload = async () => {
+  const operatorBy = resolveOperatorName();
+  if (!operatorBy) {
+    throw new Error('未获取到当前操作人，无法上传附件');
+  }
+
+  const files = await Promise.all(attachmentFiles.value.map(async attachment => ({
+    FileName: attachment.name,
+    Base64String: await fileToBase64(attachment.file),
+  })));
+  return {
+    OperatorBy: operatorBy,
+    Items: [{
+      SN: info.value.ContainerName,
+      Specs: [{
+        SpecName: info.value.SpecName,
+        Files: files,
+      }],
+    }],
+  };
+};
 
 // ====== 历史采集数据 ======
 const historyDialogVisible = ref(false);
@@ -413,6 +583,7 @@ const resetPageData = () => {
   treeComponentData.value = [];
   moveInResource.value = "";
   resourceOptions.value = [];
+  clearAttachmentSelection();
 };
 
 const handleSnBarcodeInput = async (row: any) => {
@@ -583,6 +754,7 @@ const handleScan = async () => {
   });
 
   if (res.success && res.code === 0 && res.content) {
+    clearAttachmentSelection();
     const d = res.content;
     info.value = {
       MfgOrderName: d.MfgOrderName ?? "", ProductName: d.ProductName ?? "", ContainerName: d.ContainerName ?? "",
@@ -683,23 +855,45 @@ const submitDataCollection = async () => {
       return;
     }
   }
-  const params = {
-    ContainerName: info.value.ContainerName, TaskName: info.value.TaskName, TaskListName: info.value.TaskListName,
-    ServiceName: serviceType.value, DataCollectionDefId: info.value.DataCollectionDefId,
-    DataCollectionDefName: rightTitle.value, ResourceName: info.value.ResourceName,
-    operationEntityComponentIssueLists: [],
-    operationEntityDataCollectionLists: dataCollectionList.value.map((item) => ({
-      DataPointName: item.DataPointName, DataType: item.Type, DataValue: item.value,
-    })),
-    OperatorBy: userStore.getUserInfo,
-  };
-  const res: any = await ContainerOperationExecution(params);
-  if (res.success && res.code === 0) {
-    autoReScan();
-  } else {
-    ElMessageBox.alert(res.msg || "提交失败", "错误", {
-      confirmButtonText: "确定", type: "error",
-    });
+  dataCollectionSubmitting.value = true;
+  let attachmentsUploaded = false;
+  try {
+    if (attachmentFiles.value.length > 0) {
+      const attachmentParams = await buildAttachmentUploadPayload();
+      const attachmentRes: any = await ContainerOperationUploadSpecAttachment(attachmentParams);
+      if (!attachmentRes || !attachmentRes.success || attachmentRes.code !== 0) {
+        ElMessage.error((attachmentRes && attachmentRes.msg) || '附件上传失败，已取消本次提交');
+        return;
+      }
+      attachmentsUploaded = true;
+      clearAttachmentSelection();
+    }
+
+    const params = {
+      ContainerName: info.value.ContainerName, TaskName: info.value.TaskName, TaskListName: info.value.TaskListName,
+      ServiceName: serviceType.value, DataCollectionDefId: info.value.DataCollectionDefId,
+      DataCollectionDefName: rightTitle.value, ResourceName: info.value.ResourceName,
+      operationEntityComponentIssueLists: [],
+      operationEntityDataCollectionLists: dataCollectionList.value.map((item) => ({
+        DataPointName: item.DataPointName, DataType: item.Type, DataValue: item.value,
+      })),
+      OperatorBy: userStore.getUserInfo,
+    };
+    const res: any = await ContainerOperationExecution(params);
+    if (res.success && res.code === 0) {
+      if (attachmentsUploaded) ElMessage.success('提交成功，附件已上传');
+      autoReScan();
+    } else {
+      const prefix = attachmentsUploaded ? '附件已上传，但' : '';
+      ElMessageBox.alert(`${prefix}${res.msg || '提交失败'}`, "错误", {
+        confirmButtonText: "确定", type: "error",
+      });
+    }
+  } catch (error) {
+    console.error('生产过站数据提交失败', error);
+    ElMessage.error(error instanceof Error ? error.message : '提交失败，请稍后重试');
+  } finally {
+    dataCollectionSubmitting.value = false;
   }
 };
 
@@ -726,5 +920,13 @@ onMounted(() => {
 <style scoped>
 :deep(.is-error .el-input__wrapper) {
   box-shadow: 0 0 0 1px #f56c6c inset !important;
+}
+
+.attachment-dialog-summary {
+  display: flex;
+  margin-bottom: 12px;
+  flex-direction: column;
+  gap: 4px;
+  color: #606266;
 }
 </style>

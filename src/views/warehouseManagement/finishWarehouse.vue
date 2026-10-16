@@ -52,9 +52,9 @@
             <el-tag :type="scope.row.DataStatus === 1 ? 'success' : 'warning'" size="small">{{ scope.row.Status }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="CreateUser" label="创建人" width="120" />
+        <el-table-column prop="CreateUser" label="创建人" width="160" />
         <el-table-column prop="CreateTime" label="创建时间" width="170" />
-        <el-table-column prop="UpdateUser" label="修改人" width="120" />
+        <el-table-column prop="UpdateUser" label="修改人" width="160" />
         <el-table-column prop="UpdateTime" label="修改时间" width="170" />
         <el-table-column label="操作" width="120" fixed="right" align="center">
           <template #default="scope">

@@ -6,7 +6,15 @@
           <el-input
             v-model="queryForm.MfgOrderName"
             clearable
-            placeholder="请输入工单号"
+            placeholder="请输入工单号（支持模糊搜索）"
+            @keyup.enter="handleQuery"
+          />
+        </el-form-item>
+        <el-form-item label="VN">
+          <el-input
+            v-model="queryForm.VN"
+            clearable
+            placeholder="请输入VN（支持模糊搜索）"
             @keyup.enter="handleQuery"
           />
         </el-form-item>
@@ -15,14 +23,6 @@
             v-model="queryForm.SN"
             clearable
             placeholder="流转批次 / 成品条码"
-            @keyup.enter="handleQuery"
-          />
-        </el-form-item>
-        <el-form-item label="VN">
-          <el-input
-            v-model="queryForm.VN"
-            clearable
-            placeholder="请输入VN"
             @keyup.enter="handleQuery"
           />
         </el-form-item>
@@ -169,6 +169,7 @@
             height="100%"
             row-key="MfgOrderName"
             @row-click="handleOrderRowClick"
+            @sort-change="handleOrderSortChange"
           >
             <el-table-column type="index" label="序号" width="54" fixed>
               <template #default="scope">
@@ -182,6 +183,8 @@
               :label="column.label"
               :width="column.width"
               :fixed="column.fixed"
+              :align="column.align"
+              sortable="custom"
               show-overflow-tooltip
             >
               <template #default="scope">
@@ -267,6 +270,24 @@
                 <span v-else>{{ scope.row[column.prop] }}</span>
               </template>
             </el-table-column>
+            <el-table-column
+              v-if="currentTab === 'containers'"
+              label="附件"
+              width="120"
+              fixed="right"
+              align="center"
+            >
+              <template #default="scope">
+                <el-button
+                  type="primary"
+                  link
+                  :disabled="getAttachmentCount(scope.row.SN) === 0"
+                  @click.stop="openAttachmentDownload(scope.row)"
+                >
+                  下载附件{{ getAttachmentCount(scope.row.SN) ? `(${getAttachmentCount(scope.row.SN)})` : '' }}
+                </el-button>
+              </template>
+            </el-table-column>
             <template #empty>
               <el-empty :description="primaryEmptyText" :image-size="72" />
             </template>
@@ -339,6 +360,40 @@
         </div>
       </el-card>
     </div>
+
+    <el-dialog
+      v-model="attachmentDialogVisible"
+      :title="`附件下载 - ${attachmentDialogSN || '-'}`"
+      draggable
+      width="820px"
+      :close-on-click-modal="false"
+      align-center
+    >
+      <el-table
+        v-if="attachmentDownloadRows.length > 0"
+        :data="attachmentDownloadRows"
+        size="small"
+        border
+        max-height="460"
+      >
+        <el-table-column prop="SpecName" label="工序" width="140" show-overflow-tooltip />
+        <el-table-column prop="FileName" label="文件名" min-width="210" show-overflow-tooltip />
+        <el-table-column label="大小" width="90" align="right">
+          <template #default="scope">{{ formatAttachmentSize(scope.row.FileSize) }}</template>
+        </el-table-column>
+        <el-table-column prop="CreateBy" label="上传人" width="140" show-overflow-tooltip />
+        <el-table-column prop="CreateTime" label="上传时间" width="170" />
+        <el-table-column label="操作" width="80" fixed="right" align="center">
+          <template #default="scope">
+            <el-button type="primary" link @click="downloadAttachment(scope.row)">下载</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-empty v-else description="暂无附件" :image-size="72" />
+      <template #footer>
+        <el-button type="primary" @click="attachmentDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -374,10 +429,24 @@ type Column = {
   label: string;
   width?: number;
   fixed?: "left" | "right";
+  align?: "left" | "center" | "right";
 };
 type SelectOption = { label: string; value: string };
 type PrimaryTab = "containers" | "bom" | "picking" | "confirm" | "completion";
 type LotTab = "move" | "inspection" | "consume";
+type AttachmentFile = {
+  Id?: number;
+  FileName?: string;
+  Base64String?: string;
+  FileSize?: number;
+  FileUrl?: string;
+  CreateBy?: string;
+  CreateTime?: string;
+};
+type AttachmentSpecGroup = {
+  SpecName?: string;
+  Files?: AttachmentFile[];
+};
 
 const {
   containerRef: contentGridRef,
@@ -428,7 +497,15 @@ const orderRows = ref<Row[]>([]);
 const primaryRows = ref<Row[]>([]);
 const lotRows = ref<Row[]>([]);
 const consumeDetailRows = ref<Row[]>([]);
+const containerAttachmentsBySN = ref<Record<string, AttachmentSpecGroup[]>>({});
+const attachmentDialogVisible = ref(false);
+const attachmentDialogSN = ref("");
+const attachmentDownloadRows = ref<Row[]>([]);
 const orderPage = reactive({ current: 1, size: 50 });
+const orderSort = reactive<{ prop: string; order: "ascending" | "descending" | null }>({
+  prop: "",
+  order: null,
+});
 
 const loading = reactive({
   orders: false,
@@ -465,19 +542,36 @@ const selectOptions = computed(() => ({
   mfgLines: toSelectOptions(options.mfgLines, "MfgLineName", ["Description"]),
 }));
 
+const sortedOrderRows = computed(() => {
+  if (!orderSort.prop || !orderSort.order) return orderRows.value;
+  const direction = orderSort.order === "ascending" ? 1 : -1;
+  return [...orderRows.value].sort((left, right) => {
+    const leftValue = String(
+      orderSort.prop === "SNRange" ? formatOrderSNRange(left) : left?.[orderSort.prop] ?? "",
+    );
+    const rightValue = String(
+      orderSort.prop === "SNRange" ? formatOrderSNRange(right) : right?.[orderSort.prop] ?? "",
+    );
+    return leftValue.localeCompare(rightValue, "zh-CN", {
+      numeric: true,
+      sensitivity: "base",
+    }) * direction;
+  });
+});
+
 const pagedOrderRows = computed(() => {
   const start = (orderPage.current - 1) * orderPage.size;
-  return orderRows.value.slice(start, start + orderPage.size);
+  return sortedOrderRows.value.slice(start, start + orderPage.size);
 });
 
 const panelBodyStyle = { padding: "0 10px 10px", height: "calc(100% - 49px)" };
 
 const orderColumns: Column[] = [
-  { prop: "MfgOrderName", label: "工单号", width: 150, fixed: "left" },
-  { prop: "VN", label: "VN", width: 140, fixed: "left" },
-  { prop: "SNRange", label: "SN码范围", width: 260, fixed: "left" },
+  { prop: "MfgOrderName", label: "工单号", width: 150, fixed: "left", align: "left" },
+  { prop: "VN", label: "VN", width: 140, fixed: "left", align: "left" },
+  { prop: "Qty", label: "数量", width: 90, fixed: "left", align: "left" },
+  { prop: "SNRange", label: "SN码范围", width: 260 },
   { prop: "OrderStatusName", label: "状态", width: 100 },
-  { prop: "Qty", label: "总数量", width: 90 },
   { prop: "MfgOrderComplete", label: "完成数量", width: 90 },
   { prop: "PlannedStartDate", label: "计划开始时间", width: 160 },
   { prop: "PlannedCompletionDate", label: "计划完成时间", width: 160 },
@@ -499,6 +593,7 @@ const primaryColumnMap: Record<PrimaryTab, Column[]> = {
   containers: [
     { prop: "MfgOrderName", label: "工单号", width: 150 },
     { prop: "SN", label: "SN码", width: 170 },
+    { prop: "CompletionInboundStatus", label: "是否入库", width: 100 },
     { prop: "SpecName", label: "当前工序", width: 120 },
     { prop: "InProcess", label: "在制", width: 80 },
     { prop: "ResourceName", label: "设备", width: 120 },
@@ -533,7 +628,7 @@ const primaryColumnMap: Record<PrimaryTab, Column[]> = {
   picking: [
     { prop: "ProductDesc", label: "物料描述", width: 160 },
     { prop: "VN", label: "VN", width: 120 },
-    { prop: "Operator", label: "领料人", width: 100 },
+    { prop: "Operator", label: "领料人", width: 160 },
     { prop: "WareHouseCode", label: "仓库", width: 110 },
     { prop: "OperationTime", label: "领料时间", width: 160 },
     { prop: "PickingOrderNo", label: "领料单号", width: 150 },
@@ -556,7 +651,7 @@ const primaryColumnMap: Record<PrimaryTab, Column[]> = {
     { prop: "ProductFamilyDesc", label: "型号描述", width: 130 },
     { prop: "Batch", label: "批次", width: 130 },
     { prop: "UomName", label: "单位", width: 80 },
-    { prop: "ConfirmedBy", label: "确收人", width: 100 },
+    { prop: "ConfirmedBy", label: "确收人", width: 160 },
     { prop: "ConfirmedTime", label: "确收时间", width: 160 },
     { prop: "PickingOrderNumber", label: "领料单号", width: 150 },
   ],
@@ -573,11 +668,11 @@ const primaryColumnMap: Record<PrimaryTab, Column[]> = {
     { prop: "Qty", label: "数量", width: 90 },
     { prop: "UomName", label: "单位", width: 80 },
     { prop: "CreateTime", label: "创建时间", width: 160 },
-    { prop: "CreateUser", label: "创建人", width: 100 },
+    { prop: "CreateUser", label: "创建人", width: 160 },
     { prop: "UpdateTime", label: "更新时间", width: 160 },
-    { prop: "UpdateUser", label: "更新人", width: 100 },
+    { prop: "UpdateUser", label: "更新人", width: 160 },
     { prop: "CompletionTime", label: "完工时间", width: 160 },
-    { prop: "CompletionUser", label: "完工人", width: 100 },
+    { prop: "CompletionUser", label: "完工人", width: 160 },
   ],
 };
 
@@ -588,6 +683,7 @@ const lotColumnMap: Record<LotTab, Column[]> = {
     { prop: "SpecName", label: "工序", width: 120 },
     { prop: "ResourceName", label: "设备", width: 120 },
     { prop: "TxnServiceName", label: "事务", width: 120 },
+    { prop: "OperatorBy", label: "操作人", width: 160 },
     { prop: "TxnDate", label: "时间", width: 160 },
     { prop: "Qty", label: "数量", width: 80 },
     { prop: "Status", label: "状态", width: 100 },
@@ -606,7 +702,7 @@ const lotColumnMap: Record<LotTab, Column[]> = {
     { prop: "SN", label: "SN", width: 170 },
     { prop: "ProcessName", label: "工序", width: 120 },
     { prop: "OperatorTime", label: "操作时间", width: 160 },
-    { prop: "OperatorBy", label: "操作人", width: 100 },
+    { prop: "OperatorBy", label: "操作人", width: 160 },
     { prop: "InspectionResult", label: "结果", width: 100 },
     { prop: "ItemName", label: "项目", width: 130 },
     { prop: "ItemDesc", label: "项目描述", width: 160 },
@@ -624,6 +720,7 @@ const lotColumnMap: Record<LotTab, Column[]> = {
     { prop: "Qty", label: "数量", width: 80 },
     { prop: "Status", label: "状态", width: 100 },
     { prop: "UOMName", label: "单位", width: 80 },
+    { prop: "OperatorBy", label: "操作人", width: 160 },
     { prop: "ProductName", label: "物料编码", width: 140 },
     { prop: "ProductDesc", label: "物料描述", width: 160 },
     { prop: "InvAddCode", label: "存货代码", width: 120 },
@@ -750,6 +847,129 @@ function buildQueryPayload() {
   );
 }
 
+function buildOrderQueryPayload() {
+  const payload = buildQueryPayload();
+  delete payload.MfgOrderName;
+  delete payload.SN;
+  delete payload.VN;
+  return payload;
+}
+
+function containsKeyword(values: unknown[], keyword: string) {
+  return values.some((value) => String(value ?? "").toLocaleLowerCase().includes(keyword));
+}
+
+function filterOrderRows(rows: Row[]) {
+  const mfgOrderKeyword = queryForm.MfgOrderName.trim().toLocaleLowerCase();
+  const vnKeyword = queryForm.VN.trim().toLocaleLowerCase();
+  const snKeyword = queryForm.SN.trim().toLocaleLowerCase();
+
+  return rows.filter((row) => {
+    const matchesMfgOrder = !mfgOrderKeyword || containsKeyword(
+      [row.MfgOrderName, row.MfgOrder, row.MfgOrderDesc],
+      mfgOrderKeyword,
+    );
+    const matchesVN = !vnKeyword || containsKeyword([row.VN], vnKeyword);
+    const matchesSN = !snKeyword || containsKeyword(
+      [
+        row.SN,
+        row.SNRange,
+        row.SnRange,
+        row.SNFrom,
+        row.SnFrom,
+        row.SNStart,
+        row.StartSN,
+        row.MinSN,
+        row.SNTo,
+        row.SnTo,
+        row.SNEnd,
+        row.EndSN,
+        row.MaxSN,
+        formatOrderSNRange(row),
+      ],
+      snKeyword,
+    );
+    return matchesMfgOrder && matchesVN && matchesSN;
+  });
+}
+
+function handleOrderSortChange({ prop, order }: { prop?: string; order?: "ascending" | "descending" | null }) {
+  orderSort.prop = prop || "";
+  orderSort.order = order || null;
+  orderPage.current = 1;
+}
+
+function resetAttachmentDownload() {
+  containerAttachmentsBySN.value = {};
+  attachmentDialogVisible.value = false;
+  attachmentDialogSN.value = "";
+  attachmentDownloadRows.value = [];
+}
+
+function getAttachmentCount(snValue: unknown) {
+  const sn = String(snValue ?? "").trim();
+  return (containerAttachmentsBySN.value[sn] || []).reduce(
+    (count, group) => count + (Array.isArray(group.Files) ? group.Files.length : 0),
+    0,
+  );
+}
+
+function openAttachmentDownload(row: Row) {
+  const sn = String(row?.SN ?? "").trim();
+  attachmentDialogSN.value = sn;
+  attachmentDownloadRows.value = (containerAttachmentsBySN.value[sn] || []).flatMap((group) =>
+    (Array.isArray(group.Files) ? group.Files : []).map((file) => ({
+      ...file,
+      SpecName: group.SpecName || "",
+    })),
+  );
+  attachmentDialogVisible.value = true;
+}
+
+function formatAttachmentSize(sizeValue: unknown) {
+  const size = Number(sizeValue);
+  if (!Number.isFinite(size) || size < 0) return "-";
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function downloadAttachment(file: AttachmentFile) {
+  try {
+    const rawBase64 = String(file.Base64String || "").trim();
+    if (!rawBase64) {
+      ElMessage.warning("附件内容为空，无法下载");
+      return;
+    }
+
+    const dataUriMatch = rawBase64.match(/^data:([^;,]+)?;base64,(.*)$/s);
+    const mimeType = dataUriMatch?.[1] || "application/octet-stream";
+    const base64 = (dataUriMatch?.[2] || rawBase64).replace(/\s/g, "");
+    const parts: Uint8Array[] = [];
+    const chunkSize = 32768;
+    for (let offset = 0; offset < base64.length; offset += chunkSize) {
+      const binary = window.atob(base64.slice(offset, offset + chunkSize));
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index += 1) {
+        bytes[index] = binary.charCodeAt(index);
+      }
+      parts.push(bytes);
+    }
+
+    const objectUrl = URL.createObjectURL(new Blob(parts, { type: mimeType }));
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = file.FileName || "附件";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  } catch (error) {
+    console.error("下载附件失败", error);
+    ElMessage.error("附件下载失败，请稍后重试");
+  }
+}
+
 function resetDrillDown() {
   currentMfgOrder.value = "";
   currentSN.value = "";
@@ -759,6 +979,7 @@ function resetDrillDown() {
   primaryRows.value = [];
   lotRows.value = [];
   consumeDetailRows.value = [];
+  resetAttachmentDownload();
 }
 
 async function handleQuery() {
@@ -766,8 +987,8 @@ async function handleQuery() {
   resetDrillDown();
   orderPage.current = 1;
   try {
-    const response = await MfgOrderReportQuery(buildQueryPayload());
-    orderRows.value = responseRows(response);
+    const response = await MfgOrderReportQuery(buildOrderQueryPayload());
+    orderRows.value = filterOrderRows(responseRows(response));
   } finally {
     loading.orders = false;
   }
@@ -790,6 +1011,7 @@ async function handleOrderRowClick(row: Row) {
   currentTxnId.value = "";
   lotRows.value = [];
   consumeDetailRows.value = [];
+  resetAttachmentDownload();
   await loadPrimaryRows();
 }
 
@@ -799,6 +1021,7 @@ async function handlePrimaryTabChange(name: string | number) {
   currentTxnId.value = "";
   lotRows.value = [];
   consumeDetailRows.value = [];
+  resetAttachmentDownload();
   if (currentMfgOrder.value) await loadPrimaryRows();
 }
 
@@ -812,12 +1035,22 @@ async function loadPrimaryRows() {
   };
   loading.primary = true;
   primaryRows.value = [];
+  resetAttachmentDownload();
   try {
     const response = await apiMap[currentTab.value]({
-      ...buildQueryPayload(),
+      ...buildOrderQueryPayload(),
       MfgOrderName: currentMfgOrder.value,
     });
     primaryRows.value = responseRows(response);
+    if (currentTab.value === "containers") {
+      const attachmentMap: Record<string, AttachmentSpecGroup[]> = {};
+      const attachmentItems = Array.isArray(response?.content2) ? response.content2 : [];
+      attachmentItems.forEach((item: Row) => {
+        const sn = String(item?.SN ?? "").trim();
+        if (sn) attachmentMap[sn] = Array.isArray(item.Specs) ? item.Specs : [];
+      });
+      containerAttachmentsBySN.value = attachmentMap;
+    }
   } finally {
     loading.primary = false;
   }
@@ -1034,6 +1267,10 @@ onMounted(async () => {
 
 .order-table-wrap {
   height: calc(100% - 38px);
+
+  :deep(.el-table__body tr:hover > td.el-table__cell) {
+    background-color: #cfe3fb !important;
+  }
 }
 
 .order-pagination {

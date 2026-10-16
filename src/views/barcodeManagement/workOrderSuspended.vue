@@ -38,7 +38,12 @@
           <el-form-item label="产品系列" class="mb-2">
             <el-select v-model="queryForm.ProductFamily" style="width: 180px" @change="getData" placeholder="全部" clearable filterable>
               <el-option label="全部" :value="null" />
-              <el-option v-for="item in productFamilyOptions" :key="item.ProductFamilyName" :label="item.ProductFamilyName" :value="item.ProductFamilyName" />
+              <el-option
+                v-for="item in productFamilyOptions"
+                :key="item.ProductFamilyDesc"
+                :label="item.ProductFamilyDesc"
+                :value="item.ProductFamilyDesc"
+              />
             </el-select>
           </el-form-item>
           <el-form-item label="计划开始时间" class="mb-2">

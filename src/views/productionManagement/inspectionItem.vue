@@ -63,9 +63,9 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="CreateBy" label="创建人" width="120" />
+        <el-table-column prop="CreateBy" label="创建人" width="160" />
         <el-table-column prop="CreateTime" label="创建时间" width="170" />
-        <el-table-column prop="UpdateBy" label="更新人" width="120">
+        <el-table-column prop="UpdateBy" label="更新人" width="160">
           <template #default="scope">
             <span>{{ scope.row.UpdateBy || "-" }}</span>
           </template>

@@ -38,6 +38,16 @@
               />
             </el-select>
           </el-form-item>
+          <el-form-item label="VN" class="mb-2">
+            <el-input
+              v-model="queryForm.VN"
+              style="width: 160px"
+              clearable
+              placeholder="请输入VN"
+              @keyup.enter="getData"
+              @clear="getData"
+            />
+          </el-form-item>
           <el-form-item label="产线" class="mb-2">
             <el-select
               v-model="queryForm.MfgLine"
@@ -130,6 +140,7 @@
       </div>
 
       <el-table
+        class="issue-table"
         :data="tableData"
         size="small"
         style="width: 100%"
@@ -154,7 +165,7 @@
         <el-table-column
           prop="UserName"
           label="用户名"
-          width="100"
+          width="160"
         />
         <el-table-column
           prop="CreateTime"
@@ -165,6 +176,14 @@
           prop="MfgOrderName"
           label="工单号"
           min-width="150"
+          align="left"
+          show-overflow-tooltip
+        />
+        <el-table-column
+          prop="VN"
+          label="VN"
+          min-width="120"
+          align="left"
           show-overflow-tooltip
         />
         <el-table-column
@@ -197,7 +216,7 @@
           min-width="100"
           show-overflow-tooltip
         />
-        <el-table-column prop="Qty" label="数量" width="80" align="center" />
+        <el-table-column prop="Qty" label="数量" width="80" align="left" />
         <el-table-column
           prop="WorkCenterName"
           label="车间"
@@ -303,6 +322,7 @@ const userStore = useUserStoreWithOut();
 const queryForm = ref({
   MaterialIssueNo: "",
   MfgOrder: "",
+  VN: "",
   MfgLine: "",
   WorkCenter: "",
   ProductType: "",
@@ -356,6 +376,7 @@ const getData = async () => {
   const params: any = {
     MaterialIssueNo: queryForm.value.MaterialIssueNo,
     MfgOrder: queryForm.value.MfgOrder,
+    VN: queryForm.value.VN,
     MfgLine: queryForm.value.MfgLine,
     WorkCenter: queryForm.value.WorkCenter,
     ProductType: queryForm.value.ProductType,
@@ -462,3 +483,9 @@ onBeforeUnmount(() => {
   window.removeEventListener("resize", updateTableHeight);
 });
 </script>
+
+<style scoped lang="scss">
+.issue-table :deep(.el-table__body tr:hover > td.el-table__cell) {
+  background-color: #cfe3fb !important;
+}
+</style>

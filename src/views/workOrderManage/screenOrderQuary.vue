@@ -164,7 +164,7 @@
               </el-table-column>
               <el-table-column prop="CompID" label="工治具编码" :min-width="180">
               </el-table-column>
-              <el-table-column prop="CreatedBy" label="操作人" :min-width="120" align="center">
+              <el-table-column prop="CreatedBy" label="操作人" :min-width="160" align="center">
               </el-table-column>
               <el-table-column prop="CreatedOn" label="操作时间" :min-width="180" align="center">
               </el-table-column>

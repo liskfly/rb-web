@@ -30,10 +30,23 @@
             </el-form-item>
           </el-col>
           <el-col :span="6">
+            <el-form-item label="VN" style="width: 100%">
+              <el-input v-model="form.vn" readonly />
+            </el-form-item>
+          </el-col>
+          <el-col :span="6">
+            <el-form-item label="工单数量" style="width: 100%">
+              <el-input v-model="form.orderQty" readonly />
+            </el-form-item>
+          </el-col>
+          <el-col :span="6">
             <el-form-item label="工单描述" style="width: 100%">
               <el-input v-model="form.orderDesc" readonly />
             </el-form-item>
           </el-col>
+        </el-row>
+
+        <el-row :gutter="16">
           <el-col :span="6">
             <el-form-item label="车间" style="width: 100%">
               <el-input v-model="form.workshop" readonly />
@@ -44,17 +57,9 @@
               <el-input v-model="form.productCode" readonly />
             </el-form-item>
           </el-col>
-        </el-row>
-
-        <el-row :gutter="16">
           <el-col :span="6">
             <el-form-item label="产品编码描述" style="width: 100%">
               <el-input v-model="form.productDesc" readonly />
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <el-form-item label="工单数量" style="width: 100%">
-              <el-input v-model="form.orderQty" readonly />
             </el-form-item>
           </el-col>
           <el-col :span="6">
@@ -62,14 +67,14 @@
               <el-input v-model="form.generatedQty" readonly />
             </el-form-item>
           </el-col>
+        </el-row>
+
+        <el-row :gutter="16">
           <el-col :span="6">
             <el-form-item label="工单状态" style="width: 100%">
               <el-input v-model="form.orderStatus" readonly />
             </el-form-item>
           </el-col>
-        </el-row>
-
-        <el-row :gutter="16">
           <el-col :span="6">
             <el-form-item label="计划开始时间" style="width: 100%">
               <el-input v-model="form.planStartTime" readonly />
@@ -243,7 +248,7 @@ import { useUserStoreWithOut } from '@/stores/modules/user';
 const userStore = useUserStoreWithOut();
 
 const form = ref({
-  orderNo: "", orderDesc: "", workshop: "", productCode: "", productDesc: "",
+  orderNo: "", vn: "", orderDesc: "", workshop: "", productCode: "", productDesc: "",
   orderQty: "", generatedQty: "", orderStatus: "", planStartTime: "", planEndTime: "",
   invAddCode: "", generateQty: 0, printer: "",
 });
@@ -353,7 +358,7 @@ const handleSearchAndAddToLeftTable = async () => {
 
 const handleOrderChange = async (val: string) => {
   if (!val) {
-    form.value = { ...form.value, orderNo: "", orderDesc: "", workshop: "", productCode: "", productDesc: "", orderQty: "", generatedQty: "", orderStatus: "", planStartTime: "", planEndTime: "", invAddCode: "", generateQty: 0 };
+    form.value = { ...form.value, orderNo: "", vn: "", orderDesc: "", workshop: "", productCode: "", productDesc: "", orderQty: "", generatedQty: "", orderStatus: "", planStartTime: "", planEndTime: "", invAddCode: "", generateQty: 0 };
     leftTableData.value = [];
     rightTableData.value = [];
     return;
@@ -364,6 +369,7 @@ const handleOrderChange = async (val: string) => {
     form.value = {
       ...form.value,
       orderNo: item.MfgOrderName ?? "",
+      vn: item.VN ?? "",
       orderDesc: item.MfgOrderDesc ?? "",
       workshop: item.WorkCenterName ?? "",
       productCode: item.ProductName ?? "",

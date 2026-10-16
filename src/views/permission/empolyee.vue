@@ -42,7 +42,7 @@
         <el-table-column label="序号" type="index" width="60" align="center"></el-table-column>
         <el-table-column label="工号" prop="employeeName" min-width="100">
         </el-table-column>
-        <el-table-column label="员工姓名" prop="fullName" min-width="100">
+        <el-table-column label="员工姓名" prop="fullName" min-width="160">
         </el-table-column>
         <el-table-column label="职称" prop="title" :min-width="flexColumnWidth('职称', 'title')">
         </el-table-column>

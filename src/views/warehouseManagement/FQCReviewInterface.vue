@@ -28,6 +28,15 @@
               @change="getData"
             />
           </el-form-item>
+          <el-form-item label="VN" class="mb-2">
+            <el-input
+              v-model="queryForm.VN"
+              style="width: 160px"
+              clearable
+              @clear="getData"
+              @change="getData"
+            />
+          </el-form-item>
           <el-form-item label="产品编码" class="mb-2">
             <el-input
               v-model="queryForm.Product"
@@ -78,6 +87,9 @@
           </el-form-item>
           <el-form-item class="mb-2">
             <el-button type="primary" @click="getData">查询</el-button>
+            <el-button type="success" :loading="exportLoading" @click="handleExport">
+              导出
+            </el-button>
           </el-form-item>
         </el-form>
       </div>
@@ -149,9 +161,9 @@
             >
           </template>
         </el-table-column>
-        <el-table-column prop="CreateUser" label="创建人" width="100" />
+        <el-table-column prop="CreateUser" label="创建人" width="160" />
         <el-table-column prop="CreateTime" label="创建时间" width="170" />
-        <el-table-column prop="CompletionUser" label="入库人" width="100" />
+        <el-table-column prop="CompletionUser" label="入库人" width="160" />
         <el-table-column prop="CompletionTime" label="入库时间" width="170" />
         <el-table-column label="操作" width="180" fixed="right" align="center">
           <template #default="scope">
@@ -414,7 +426,7 @@
                   {{ formatInspectionTime(scope.row.OperatorTime) }}
                 </template>
               </el-table-column>
-              <el-table-column prop="OperatorBy" label="检验人" min-width="110" />
+              <el-table-column prop="OperatorBy" label="检验人" min-width="160" />
               <el-table-column label="检验项数" width="90" align="right">
                 <template #default="scope">{{ scope.row.Items?.length || 0 }}</template>
               </el-table-column>
@@ -434,8 +446,10 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from "vue";
 import { ElMessage } from "element-plus";
+import { saveAs } from "file-saver";
 import {
   QueryCompletionInboundList,
+  ExportFqcAudit,
   QueryCompletionInboundDetailList,
   QueryFqcAuditInspection,
   QueryWareHouse,
@@ -446,6 +460,7 @@ import {
 const queryForm = ref({
   CompletionInboundNo: "",
   MfgOrder: "",
+  VN: "",
   Product: "",
   Status: null as number | null,
   CreateStartTime: "",
@@ -456,11 +471,13 @@ const tableData = ref<any[]>([]);
 const total = ref(0);
 const pageObj = ref({ currentPage: 1, pageSize: 30 });
 const tableHeight = ref(400);
+const exportLoading = ref(false);
 
-const getData = async () => {
+const buildQueryParams = () => {
   const params: any = {
     CompletionInboundNo: queryForm.value.CompletionInboundNo,
     MfgOrder: queryForm.value.MfgOrder,
+    VN: queryForm.value.VN,
     Product: queryForm.value.Product,
     OperationUser: queryForm.value.OperationUser,
     Page: pageObj.value.currentPage,
@@ -474,7 +491,11 @@ const getData = async () => {
   if (queryForm.value.CreateEndTime)
     params.CreateEndTime = queryForm.value.CreateEndTime;
 
-  const res: any = await QueryCompletionInboundList(params);
+  return params;
+};
+
+const getData = async () => {
+  const res: any = await QueryCompletionInboundList(buildQueryParams());
   if (res && res.success && res.code === 0) {
     tableData.value = res.content || [];
     total.value = res.total || 0;
@@ -482,6 +503,35 @@ const getData = async () => {
     ElMessage.error((res && res.msg) || "查询失败");
     tableData.value = [];
     total.value = 0;
+  }
+};
+
+const handleExport = async () => {
+  if (exportLoading.value) return;
+
+  exportLoading.value = true;
+  try {
+    const res: any = await ExportFqcAudit(buildQueryParams());
+    if (!res?.success || !res?.content) {
+      ElMessage.error(res?.msg || "暂无可导出的数据");
+      return;
+    }
+
+    const base64 = String(res.content).replace(/^data:.*?;base64,/, "");
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    const file = new Blob([bytes], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    saveAs(file, res.content2 || "FQCAudit.xlsx");
+    ElMessage.success(res.msg || "导出成功");
+  } catch (error: any) {
+    ElMessage.error(error?.msg || error?.message || "导出失败");
+  } finally {
+    exportLoading.value = false;
   }
 };
 

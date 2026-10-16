@@ -270,7 +270,7 @@ const columnData1 = reactive([
     text: true,
       prop: "fullname",
     label: "扫描人",
-    width: "150",
+    width: "160",
     align: "1",
   },
   {

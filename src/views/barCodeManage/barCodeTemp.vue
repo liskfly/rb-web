@@ -54,7 +54,7 @@
             </el-table-column>
 
           
-            <el-table-column prop="Template_UpdateBy" label="更新人" width="120" />
+            <el-table-column prop="Template_UpdateBy" label="更新人" width="160" />
             <el-table-column prop="Template_UpdateOn" label="更新时间" width="180" />
             <el-table-column prop="Template_Remark" label="备注" :show-overflow-tooltip="true"  />
            

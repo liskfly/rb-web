@@ -126,7 +126,7 @@ const columnData = reactive([
         text: true,
         prop: "CreatedBy",
         label: "操作人",
-        width: "150",
+        width: "160",
         // min: true,
         align: "1",
     },
