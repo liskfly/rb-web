@@ -20,23 +20,14 @@
             />
           </el-form-item>
           <el-form-item label="生产工单" class="mb-2">
-            <el-select
+            <el-input
               v-model="queryForm.MfgOrder"
               style="width: 200px"
               clearable
-              filterable
-              @change="getData"
+              placeholder="请输入生产工单"
+              @keyup.enter="getData"
               @clear="getData"
-              placeholder="全部"
-            >
-              <el-option label="全部" value="" />
-              <el-option
-                v-for="item in mfgOrderOptions"
-                :key="item.MfgOrderName"
-                :label="item.MfgOrderName"
-                :value="item.MfgOrderName"
-              />
-            </el-select>
+            />
           </el-form-item>
           <el-form-item label="VN" class="mb-2">
             <el-input
@@ -157,6 +148,21 @@
           </template>
         </el-table-column>
         <el-table-column
+          prop="MfgOrderName"
+          label="工单号"
+          min-width="150"
+          align="left"
+          show-overflow-tooltip
+        />
+        <el-table-column
+          prop="VN"
+          label="VN"
+          min-width="120"
+          align="left"
+          show-overflow-tooltip
+        />
+        <el-table-column prop="Qty" label="数量" width="80" align="left" />
+        <el-table-column
           prop="PickingOrderNumber"
           label="发料单号"
           min-width="140"
@@ -171,20 +177,6 @@
           prop="CreateTime"
           label="创建时间"
           width="170"
-        />
-        <el-table-column
-          prop="MfgOrderName"
-          label="工单号"
-          min-width="150"
-          align="left"
-          show-overflow-tooltip
-        />
-        <el-table-column
-          prop="VN"
-          label="VN"
-          min-width="120"
-          align="left"
-          show-overflow-tooltip
         />
         <el-table-column
           prop="ProductFamily"
@@ -216,7 +208,6 @@
           min-width="100"
           show-overflow-tooltip
         />
-        <el-table-column prop="Qty" label="数量" width="80" align="left" />
         <el-table-column
           prop="WorkCenterName"
           label="车间"
@@ -313,7 +304,6 @@ import {
   WorkOrderOperationMfgLineQuery,
   WorkOrderOperationProductFamilyQuery,
   WorkOrderOperationProductTypeQuery,
-  WorkOrderOperationMfgOrderQuery,
 } from "@/api/operate";
 
 const userStore = useUserStoreWithOut();
@@ -335,7 +325,6 @@ const workCenterOptions = ref<any[]>([]);
 const mfgLineOptions = ref<any[]>([]);
 const productTypeOptions = ref<any[]>([]);
 const productFamilyOptions = ref<any[]>([]);
-const mfgOrderOptions = ref<any[]>([]);
 
 // ====== 表格 ======
 const tableData = ref<any[]>([]);
@@ -358,11 +347,6 @@ const loadDropdownOptions = async () => {
   const productTypeRes: any = await WorkOrderOperationProductTypeQuery();
   if (productTypeRes && productTypeRes.success && productTypeRes.code === 0) {
     productTypeOptions.value = productTypeRes.content || [];
-  }
-
-  const mfgOrderRes: any = await WorkOrderOperationMfgOrderQuery();
-  if (mfgOrderRes && mfgOrderRes.success && mfgOrderRes.code === 0) {
-    mfgOrderOptions.value = mfgOrderRes.content || [];
   }
 
   const productFamilyRes: any = await WorkOrderOperationProductFamilyQuery();

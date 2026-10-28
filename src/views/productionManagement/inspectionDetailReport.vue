@@ -61,6 +61,14 @@
         <el-form-item class="query-actions">
           <el-button type="primary" :loading="loading.orders" @click="handleQuery">查询</el-button>
           <el-button @click="handleReset">清空</el-button>
+          <el-button
+            type="success"
+            :loading="exportLoading"
+            :disabled="!currentOrderRow || loading.details"
+            @click="handleExport"
+          >
+            导出表格
+          </el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -223,9 +231,11 @@ const orderRows = ref<Row[]>([]);
 const detailRows = ref<DetailRow[]>([]);
 const detailColumns = ref<string[]>([]);
 const currentMfgOrder = ref("");
+const currentOrderRow = ref<Row | null>(null);
 const hasQueried = ref(false);
 const orderTableRef = ref();
 const loading = reactive({ orders: false, details: false });
+const exportLoading = ref(false);
 
 const panelBodyStyle = {
   padding: "0 10px 10px",
@@ -263,6 +273,7 @@ function buildQueryPayload() {
 function resetDetail() {
   detailRequestId += 1;
   currentMfgOrder.value = "";
+  currentOrderRow.value = null;
   detailRows.value = [];
   detailColumns.value = [];
   loading.details = false;
@@ -329,6 +340,89 @@ function pivotDetails(rows: Row[]) {
   return { columns, rows: Array.from(rowMap.values()) };
 }
 
+function formatExportTime() {
+  const now = new Date();
+  const part = (value: number) => String(value).padStart(2, "0");
+  return `${now.getFullYear()}${part(now.getMonth() + 1)}${part(now.getDate())}_${part(now.getHours())}${part(now.getMinutes())}${part(now.getSeconds())}`;
+}
+
+async function handleExport() {
+  const order = currentOrderRow.value;
+  if (!order) {
+    ElMessage.warning("请先选择左侧工单");
+    return;
+  }
+  if (exportLoading.value) return;
+
+  exportLoading.value = true;
+  try {
+    const XLSX = await import("xlsx");
+    const orderHeaders = [
+      "工单",
+      "VN",
+      "SN起",
+      "SN止",
+      "SN数",
+      "工单总数",
+      "完成数",
+      "产品编码",
+      "描述",
+    ];
+    const orderValues = [
+      order.MfgOrderName ?? "",
+      order.VN ?? "",
+      order.SNFrom ?? "",
+      order.SNTo ?? "",
+      order.SNCount ?? "",
+      order.Qty ?? "",
+      order.MfgOrderComplete ?? "",
+      order.ProductName ?? "",
+      order.ProductDesc ?? "",
+    ];
+    const orderSheet = XLSX.utils.aoa_to_sheet([orderHeaders, orderValues]);
+    orderSheet["!cols"] = [
+      { wch: 22 },
+      { wch: 20 },
+      { wch: 22 },
+      { wch: 22 },
+      { wch: 10 },
+      { wch: 12 },
+      { wch: 10 },
+      { wch: 20 },
+      { wch: 30 },
+    ];
+
+    const detailHeaders = ["序号", "批次", "结果", ...detailColumns.value];
+    const detailValues = detailRows.value.map((row, index) => [
+      index + 1,
+      row.SN,
+      displayValue(row.InspectionResult),
+      ...detailColumns.value.map((column) => displayValue(row.values[column])),
+    ]);
+    const detailSheet = XLSX.utils.aoa_to_sheet([detailHeaders, ...detailValues]);
+    detailSheet["!cols"] = detailHeaders.map((header, index) => ({
+      wch: index === 0
+        ? 8
+        : index === 1
+          ? 24
+          : Math.max(12, Math.min(36, Array.from(header).length * 2 + 6)),
+    }));
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, orderSheet, "工单信息");
+    XLSX.utils.book_append_sheet(workbook, detailSheet, "检验明细");
+
+    const safeOrderName = String(order.MfgOrderName || "工单").replace(/[\\/:*?"<>|]/g, "_");
+    XLSX.writeFile(workbook, `检验明细报表_${safeOrderName}_${formatExportTime()}.xlsx`);
+    ElMessage.success("导出成功");
+  } catch (error) {
+    console.error("检验明细报表导出失败", error);
+    ElMessage.error("导出失败，请稍后重试");
+  } finally {
+    exportLoading.value = false;
+  }
+}
+
 async function handleQuery() {
   if (
     queryForm.OperatorTimeFrom &&
@@ -386,6 +480,7 @@ async function loadInspectionDetails(row: Row) {
 
   const requestId = ++detailRequestId;
   currentMfgOrder.value = String(row.MfgOrderName);
+  currentOrderRow.value = row;
   detailRows.value = [];
   detailColumns.value = [];
   loading.details = true;

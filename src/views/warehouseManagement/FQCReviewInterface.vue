@@ -342,98 +342,63 @@
             {{ inspectionDetailData.CompletionInboundNo || auditForm.CompletionInboundNo || "-" }}
           </el-descriptions-item>
           <el-descriptions-item label="SN数量">
-            {{ inspectionDetailData.SNList.length }}
+            {{ inspectionDetailData.Rows.length }}
           </el-descriptions-item>
-          <el-descriptions-item label="工序数量">
-            {{ inspectionDetailData.ProcessList.length }}
+          <el-descriptions-item label="检验项目">
+            {{ inspectionDetailData.Columns.length }}
           </el-descriptions-item>
         </el-descriptions>
 
-        <el-tabs v-model="inspectionDetailActiveTab" type="border-card">
-          <el-tab-pane
-            :label="`SN清单 (${inspectionDetailData.SNList.length})`"
-            name="sn-list"
-          >
-            <el-table
-              :data="inspectionDetailData.SNList"
-              border
-              stripe
-              size="small"
-              height="480"
-            >
-              <el-table-column type="index" label="序号" width="55" align="center" />
-              <el-table-column prop="SN" label="SN码" min-width="165" show-overflow-tooltip />
-              <el-table-column prop="MaterialCode" label="物料编码" min-width="140" show-overflow-tooltip />
-              <el-table-column prop="ProductFamily" label="产品系列" min-width="120" show-overflow-tooltip />
-              <el-table-column prop="ProductDesc" label="产品描述" min-width="140" show-overflow-tooltip />
-              <el-table-column prop="Qty" label="数量" width="80" align="right" />
-              <el-table-column prop="UomName" label="单位" width="90" align="center" />
-              <template #empty><el-empty description="暂无SN数据" /></template>
-            </el-table>
-          </el-tab-pane>
+        <div class="mb-3">
+          <el-input
+            v-model="inspectionSNKeyword"
+            placeholder="请输入SN（支持模糊搜索）"
+            clearable
+            style="width: 260px"
+          />
+        </div>
 
-          <el-tab-pane
-            v-for="(process, processIndex) in inspectionDetailData.ProcessList"
-            :key="`${process.ProcessName}-${processIndex}`"
-            :label="`${process.ProcessName || '未命名工序'} (${process.Inspections.length})`"
-            :name="`process-${processIndex}`"
+        <el-table
+          :data="filterInspectionRows(inspectionDetailData.Rows)"
+          border
+          stripe
+          size="small"
+          height="560"
+        >
+          <el-table-column type="index" label="序号" width="55" fixed="left" align="center" />
+          <el-table-column prop="SN" label="批次" width="165" fixed="left" show-overflow-tooltip />
+          <el-table-column label="结果" width="90" align="center">
+            <template #default="scope">
+              <el-tag
+                v-if="scope.row.InspectionResult"
+                size="small"
+                :type="inspectionResultTagType(scope.row.InspectionResult)"
+              >
+                {{ formatInspectionValue(scope.row.InspectionResult) }}
+              </el-tag>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+          <el-table-column
+            v-for="column in inspectionDetailData.Columns"
+            :key="column"
+            :label="column"
+            :width="inspectionColumnWidth(column)"
+            show-overflow-tooltip
           >
-            <el-table
-              :data="process.Inspections"
-              border
-              stripe
-              size="small"
-              height="480"
-              row-key="SN"
-            >
-              <el-table-column type="expand" width="48">
-                <template #default="scope">
-                  <div class="px-4 py-2">
-                    <el-table :data="scope.row.Items || []" border size="small">
-                      <el-table-column type="index" label="序号" width="55" align="center" />
-                      <el-table-column prop="ItemName" label="检验项目" min-width="210" show-overflow-tooltip />
-                      <el-table-column prop="Description" label="描述" min-width="130" show-overflow-tooltip />
-                      <el-table-column prop="JudgeType" label="判定类型" width="100" />
-                      <el-table-column prop="ReferenceStandard" label="参考标准" min-width="170" show-overflow-tooltip />
-                      <el-table-column label="下限" width="90" align="right">
-                        <template #default="itemScope">
-                          {{ displayInspectionValue(itemScope.row.LowerLimit) }}
-                        </template>
-                      </el-table-column>
-                      <el-table-column label="上限" width="90" align="right">
-                        <template #default="itemScope">
-                          {{ displayInspectionValue(itemScope.row.UpperLimit) }}
-                        </template>
-                      </el-table-column>
-                      <el-table-column prop="ActualValue" label="实测值" min-width="110" show-overflow-tooltip />
-                      <el-table-column prop="Unit" label="单位" width="90" />
-                      <template #empty><el-empty description="暂无检验项目" :image-size="60" /></template>
-                    </el-table>
-                  </div>
-                </template>
-              </el-table-column>
-              <el-table-column type="index" label="序号" width="55" align="center" />
-              <el-table-column prop="SN" label="SN码" min-width="165" show-overflow-tooltip />
-              <el-table-column label="检验结果" width="100" align="center">
-                <template #default="scope">
-                  <el-tag :type="inspectionResultTagType(scope.row.InspectionResult)" size="small">
-                    {{ scope.row.InspectionResult || "-" }}
-                  </el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column label="检验时间" min-width="180">
-                <template #default="scope">
-                  {{ formatInspectionTime(scope.row.OperatorTime) }}
-                </template>
-              </el-table-column>
-              <el-table-column prop="OperatorBy" label="检验人" min-width="160" />
-              <el-table-column label="检验项数" width="90" align="right">
-                <template #default="scope">{{ scope.row.Items?.length || 0 }}</template>
-              </el-table-column>
-              <template #empty><el-empty description="该工序暂无检验数据" /></template>
-            </el-table>
-          </el-tab-pane>
-        </el-tabs>
+            <template #default="scope">
+              <el-tag
+                v-if="isInspectionResultValue(scope.row.values[column])"
+                size="small"
+                :type="inspectionResultTagType(scope.row.values[column])"
+              >
+                {{ formatInspectionValue(scope.row.values[column]) }}
+              </el-tag>
+              <span v-else>{{ displayInspectionValue(scope.row.values[column]) }}</span>
+            </template>
+          </el-table-column>
+          <template #empty><el-empty description="暂无检验数据" /></template>
+        </el-table>
       </div>
 
       <template #footer>
@@ -603,15 +568,15 @@ const wareHouseOptions = ref<any[]>([]);
 const auditDetailData = ref<any[]>([]); // 存储查询到的明细数据
 const inspectionDetailVisible = ref(false);
 const inspectionDetailLoading = ref(false);
-const inspectionDetailActiveTab = ref("sn-list");
+const inspectionSNKeyword = ref("");
 const inspectionDetailData = ref<{
   CompletionInboundNo: string;
-  SNList: any[];
-  ProcessList: any[];
+  Columns: string[];
+  Rows: any[];
 }>({
   CompletionInboundNo: "",
-  SNList: [],
-  ProcessList: [],
+  Columns: [],
+  Rows: [],
 });
 let inspectionDetailRequestId = 0;
 
@@ -675,19 +640,76 @@ const handleAudit = async (row: any) => {
   auditDialogVisible.value = true;
 };
 
-const displayInspectionValue = (value: any) =>
-  value === null || value === undefined || value === "" ? "-" : value;
+const formatInspectionValue = (value: any) => {
+  if (value === true || String(value).trim().toLocaleLowerCase() === "true") return "合格";
+  if (value === false || String(value).trim().toLocaleLowerCase() === "false") return "不合格";
+  return value ?? "";
+};
 
-const formatInspectionTime = (value: any) => {
-  if (!value) return "-";
-  return String(value).replace("T", " ");
+const displayInspectionValue = (value: any) => {
+  const formatted = formatInspectionValue(value);
+  return formatted === "" || formatted === null || formatted === undefined ? "-" : formatted;
 };
 
 const inspectionResultTagType = (value: any): "success" | "danger" | "info" => {
-  const result = String(value || "").trim();
+  const result = String(formatInspectionValue(value) || "").trim();
   if (result === "合格" || result === "通过") return "success";
   if (result === "不合格" || result === "不通过") return "danger";
   return "info";
+};
+
+const isInspectionResultValue = (value: any) =>
+  ["合格", "不合格", "通过", "不通过"].includes(
+    String(formatInspectionValue(value) ?? "").trim(),
+  );
+
+const buildInspectionTable = (details: any[]) => {
+  const columns: string[] = [];
+  const columnSet = new Set<string>();
+  const rowMap = new Map<string, any>();
+
+  details.forEach((detail: any) => {
+    const sn = String(detail?.SN ?? "");
+    const itemName = String(detail?.ItemName ?? "").trim();
+
+    if (itemName && !columnSet.has(itemName)) {
+      columnSet.add(itemName);
+      columns.push(itemName);
+    }
+
+    if (!rowMap.has(sn)) {
+      rowMap.set(sn, {
+        SN: sn,
+        InspectionResult: detail?.InspectionResult ?? "",
+        values: {},
+      });
+    }
+
+    const row = rowMap.get(sn);
+    if (
+      detail?.InspectionResult !== null &&
+      detail?.InspectionResult !== undefined &&
+      detail?.InspectionResult !== ""
+    ) {
+      row.InspectionResult = detail.InspectionResult;
+    }
+    if (itemName) {
+      row.values[itemName] = detail?.ActualValue;
+    }
+  });
+
+  return { columns, rows: Array.from(rowMap.values()) };
+};
+
+const inspectionColumnWidth = (column: string) =>
+  Math.max(120, Math.min(240, Array.from(column).length * 16 + 48));
+
+const filterInspectionRows = (rows: any[]) => {
+  const keyword = inspectionSNKeyword.value.trim().toLocaleLowerCase();
+  if (!keyword) return rows;
+  return rows.filter((row: any) =>
+    String(row?.SN ?? "").toLocaleLowerCase().includes(keyword),
+  );
 };
 
 const handleViewInspectionDetail = async () => {
@@ -699,11 +721,11 @@ const handleViewInspectionDetail = async () => {
   if (inspectionDetailLoading.value) return;
 
   const requestId = ++inspectionDetailRequestId;
-  inspectionDetailActiveTab.value = "sn-list";
+  inspectionSNKeyword.value = "";
   inspectionDetailData.value = {
     CompletionInboundNo: completionInboundNo,
-    SNList: [],
-    ProcessList: [],
+    Columns: [],
+    Rows: [],
   };
   inspectionDetailVisible.value = true;
   inspectionDetailLoading.value = true;
@@ -717,21 +739,11 @@ const handleViewInspectionDetail = async () => {
       return;
     }
 
-    const content = res.content || {};
+    const table = buildInspectionTable(Array.isArray(res.content) ? res.content : []);
     inspectionDetailData.value = {
-      CompletionInboundNo: content.CompletionInboundNo || completionInboundNo,
-      SNList: Array.isArray(content.SNList) ? content.SNList : [],
-      ProcessList: Array.isArray(content.ProcessList)
-        ? content.ProcessList.map((process: any) => ({
-            ...process,
-            Inspections: Array.isArray(process.Inspections)
-              ? process.Inspections.map((inspection: any) => ({
-                  ...inspection,
-                  Items: Array.isArray(inspection.Items) ? inspection.Items : [],
-                }))
-              : [],
-          }))
-        : [],
+      CompletionInboundNo: completionInboundNo,
+      Columns: table.columns,
+      Rows: table.rows,
     };
   } catch (error: any) {
     if (requestId === inspectionDetailRequestId) {
@@ -746,11 +758,11 @@ const inspectionDetailDialogCancel = () => {
   inspectionDetailRequestId += 1;
   inspectionDetailVisible.value = false;
   inspectionDetailLoading.value = false;
-  inspectionDetailActiveTab.value = "sn-list";
+  inspectionSNKeyword.value = "";
   inspectionDetailData.value = {
     CompletionInboundNo: "",
-    SNList: [],
-    ProcessList: [],
+    Columns: [],
+    Rows: [],
   };
 };
 

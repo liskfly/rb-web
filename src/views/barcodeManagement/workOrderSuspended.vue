@@ -17,6 +17,9 @@
           <el-form-item label="工单编号" class="mb-2">
             <el-input v-model="queryForm.MfgOrder" placeholder="输入工单编号" style="width: 180px" clearable @clear="getData" @change="getData" />
           </el-form-item>
+          <el-form-item label="VN" class="mb-2">
+            <el-input v-model="queryForm.VN" placeholder="输入VN" style="width: 180px" clearable @clear="getData" @change="getData" />
+          </el-form-item>
           <el-form-item label="产线" class="mb-2">
             <el-select v-model="queryForm.MfgLine" style="width: 200px" @change="getData" placeholder="全部" clearable filterable>
               <el-option label="全部" :value="null" />
@@ -87,6 +90,11 @@
             </el-select>
           </el-form-item>
           <el-form-item class="mb-2">
+            <el-checkbox v-model="queryForm.ExcludeOfflineAndPaused" @change="getData">
+              排除下线及暂停工单
+            </el-checkbox>
+          </el-form-item>
+          <el-form-item class="mb-2">
             <el-button type="primary" @click="getData">查询</el-button>
             <el-button @click="resetQuery">重置</el-button>
             <el-button 
@@ -109,6 +117,7 @@
 
       <div class="flex-1 min-h-0">
         <el-table
+          class="work-order-table"
           :data="tableData"
           size="small"
           style="width: 100%"
@@ -124,7 +133,30 @@
             <span>{{ scope.$index + pageObj.pageSize * (pageObj.currentPage - 1) + 1 }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="MfgOrderName" label="工单编号" min-width="130" show-overflow-tooltip />
+        <el-table-column
+          prop="MfgOrderName"
+          label="工单编号"
+          min-width="130"
+          align="left"
+          sortable
+          show-overflow-tooltip
+        />
+        <el-table-column
+          prop="VN"
+          label="VN"
+          min-width="120"
+          align="left"
+          sortable
+          show-overflow-tooltip
+        />
+        <el-table-column prop="Qty" label="数量" width="80" align="left" />
+        <el-table-column prop="OrderStatusName" label="状态" width="100" align="left">
+          <template #default="scope">
+            <el-tag :type="getStatusType(scope.row.OrderStatusName)" size="small">
+              {{ scope.row.OrderStatusName || '-' }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="ProductDesc" label="产品描述" min-width="130" show-overflow-tooltip>
           <template #default="scope">
             <span>{{ scope.row.ProductDesc || '-' }}</span>
@@ -135,7 +167,6 @@
             <span>{{ scope.row.ProductName || '-' }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="Qty" label="数量" width="80" align="center" />
         <el-table-column prop="UOMName" label="单位" width="80" align="center">
           <template #default="scope">
             <span>{{ scope.row.UOMName || '-' }}</span>
@@ -149,13 +180,6 @@
         <el-table-column prop="ProductFamilyName" label="产品系列" min-width="120" show-overflow-tooltip>
           <template #default="scope">
             <span>{{ scope.row.ProductFamilyName || '-' }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="OrderStatusName" label="状态" width="100" align="center">
-          <template #default="scope">
-            <el-tag :type="getStatusType(scope.row.OrderStatusName)" size="small">
-              {{ scope.row.OrderStatusName || '-' }}
-            </el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="WorkCenterName" label="车间" min-width="160" show-overflow-tooltip>
@@ -208,6 +232,7 @@ import {
 // ====== 查询表单 ======
 const queryForm = ref({
   MfgOrder: "",
+  VN: "",
   PlannedStartDate: "",
   PlannedEndDate: "",
   PlannedCompletionStartDate: "",
@@ -218,6 +243,7 @@ const queryForm = ref({
   ProductFamily: null as string | null,
   Product: null as string | null,
   OrderStatus: null as string | null,
+  ExcludeOfflineAndPaused: true,
 });
 const plannedStartDateRange = ref<string[]>([]);
 const plannedCompletionDateRange = ref<string[]>([]);
@@ -336,6 +362,7 @@ const fetchDropdownData = async () => {
 const getData = async () => {
   const params: any = {
     MfgOrder: queryForm.value.MfgOrder || undefined,
+    VN: queryForm.value.VN || undefined,
     PlannedStartDate: queryForm.value.PlannedStartDate || undefined,
     PlannedEndDate: queryForm.value.PlannedEndDate || undefined,
     PlannedCompletionStartDate: queryForm.value.PlannedCompletionStartDate || undefined,
@@ -346,6 +373,7 @@ const getData = async () => {
     ProductFamily: queryForm.value.ProductFamily || undefined,
     Product: queryForm.value.Product || undefined,
     OrderStatus: queryForm.value.OrderStatus || undefined,
+    ExcludeOfflineAndPaused: queryForm.value.ExcludeOfflineAndPaused,
     pageSize: pageObj.value.pageSize,
     currentPage: pageObj.value.currentPage,
   };
@@ -379,6 +407,7 @@ const getData = async () => {
 const resetQuery = () => {
   queryForm.value = {
     MfgOrder: "",
+    VN: "",
     PlannedStartDate: "",
     PlannedEndDate: "",
     PlannedCompletionStartDate: "",
@@ -389,6 +418,7 @@ const resetQuery = () => {
     ProductFamily: null,
     Product: null,
     OrderStatus: null,
+    ExcludeOfflineAndPaused: true,
   };
   plannedStartDateRange.value = [];
   plannedCompletionDateRange.value = [];
@@ -496,5 +526,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* 可根据需要添加样式 */
+.work-order-table :deep(.el-table__body tr:hover > td.el-table__cell) {
+  background-color: #cfe3fb !important;
+}
 </style>

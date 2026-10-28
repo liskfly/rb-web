@@ -848,49 +848,7 @@ function buildQueryPayload() {
 }
 
 function buildOrderQueryPayload() {
-  const payload = buildQueryPayload();
-  delete payload.MfgOrderName;
-  delete payload.SN;
-  delete payload.VN;
-  return payload;
-}
-
-function containsKeyword(values: unknown[], keyword: string) {
-  return values.some((value) => String(value ?? "").toLocaleLowerCase().includes(keyword));
-}
-
-function filterOrderRows(rows: Row[]) {
-  const mfgOrderKeyword = queryForm.MfgOrderName.trim().toLocaleLowerCase();
-  const vnKeyword = queryForm.VN.trim().toLocaleLowerCase();
-  const snKeyword = queryForm.SN.trim().toLocaleLowerCase();
-
-  return rows.filter((row) => {
-    const matchesMfgOrder = !mfgOrderKeyword || containsKeyword(
-      [row.MfgOrderName, row.MfgOrder, row.MfgOrderDesc],
-      mfgOrderKeyword,
-    );
-    const matchesVN = !vnKeyword || containsKeyword([row.VN], vnKeyword);
-    const matchesSN = !snKeyword || containsKeyword(
-      [
-        row.SN,
-        row.SNRange,
-        row.SnRange,
-        row.SNFrom,
-        row.SnFrom,
-        row.SNStart,
-        row.StartSN,
-        row.MinSN,
-        row.SNTo,
-        row.SnTo,
-        row.SNEnd,
-        row.EndSN,
-        row.MaxSN,
-        formatOrderSNRange(row),
-      ],
-      snKeyword,
-    );
-    return matchesMfgOrder && matchesVN && matchesSN;
-  });
+  return buildQueryPayload();
 }
 
 function handleOrderSortChange({ prop, order }: { prop?: string; order?: "ascending" | "descending" | null }) {
@@ -988,7 +946,7 @@ async function handleQuery() {
   orderPage.current = 1;
   try {
     const response = await MfgOrderReportQuery(buildOrderQueryPayload());
-    orderRows.value = filterOrderRows(responseRows(response));
+    orderRows.value = responseRows(response);
   } finally {
     loading.orders = false;
   }

@@ -11,23 +11,14 @@
           :inline="true"
         >
           <el-form-item label="生产工单" class="mb-2">
-            <el-select
+            <el-input
               v-model="queryForm.MfgOrder"
               style="width: 200px"
               clearable
-              filterable
-              @change="getData"
+              placeholder="请输入生产工单"
+              @keyup.enter="getData"
               @clear="getData"
-              placeholder="全部"
-            >
-              <el-option label="全部" value="" />
-              <el-option
-                v-for="item in mfgOrderOptions"
-                :key="item.MfgOrderName"
-                :label="item.MfgOrderName"
-                :value="item.MfgOrderName"
-              />
-            </el-select>
+            />
           </el-form-item>
           <el-form-item label="VN" class="mb-2">
             <el-input
@@ -156,6 +147,15 @@
           show-overflow-tooltip
         />
         <el-table-column
+          prop="VN"
+          label="VN"
+          min-width="120"
+          align="left"
+          sortable
+          show-overflow-tooltip
+        />
+        <el-table-column prop="Qty" label="数量" width="80" align="left" />
+        <el-table-column
           prop="ProductFamilyDesc"
           label="产品系列"
           min-width="130"
@@ -165,14 +165,6 @@
           prop="ProductDesc"
           label="产品名称"
           min-width="150"
-          show-overflow-tooltip
-        />
-        <el-table-column
-          prop="VN"
-          label="VN"
-          min-width="120"
-          align="left"
-          sortable
           show-overflow-tooltip
         />
         <el-table-column
@@ -193,7 +185,6 @@
           min-width="100"
           show-overflow-tooltip
         />
-        <el-table-column prop="Qty" label="数量" width="80" align="left" />
         <el-table-column prop="UOMName" label="单位" width="70" align="center" />
         <el-table-column
           prop="WorkCenterName"
@@ -353,7 +344,6 @@ import {
   WorkOrderOperationMfgLineQuery,
   WorkOrderOperationProductFamilyQuery,
   WorkOrderOperationProductTypeQuery,
-  WorkOrderOperationMfgOrderQuery,
   WorkOrderMaterialDetailQuery,
   WareHouseQuery,
   GetErpStock,
@@ -378,7 +368,6 @@ const workCenterOptions = ref<any[]>([]);
 const mfgLineOptions = ref<any[]>([]);
 const productTypeOptions = ref<any[]>([]);
 const productFamilyOptions = ref<any[]>([]);
-const mfgOrderOptions = ref<any[]>([]);
 
 // ====== 表格 ======
 const tableData = ref<any[]>([]);
@@ -404,12 +393,6 @@ const loadDropdownOptions = async () => {
   const productTypeRes: any = await WorkOrderOperationProductTypeQuery();
   if (productTypeRes && productTypeRes.success && productTypeRes.code === 0) {
     productTypeOptions.value = productTypeRes.content || [];
-  }
-
-  // 工单
-  const mfgOrderRes: any = await WorkOrderOperationMfgOrderQuery();
-  if (mfgOrderRes && mfgOrderRes.success && mfgOrderRes.code === 0) {
-    mfgOrderOptions.value = mfgOrderRes.content || [];
   }
 
   // 产品系列

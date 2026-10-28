@@ -1549,6 +1549,25 @@ export function ReBornMfgLineQuery(data: any = {}) {
   return request({ url: "/api/ReBornReport/MfgLineQuery", method: "post", data });
 }
 
+/** 在制品设备下拉查询 */
+export function ReBornResourceQuery() {
+  return request({ url: "/api/ReBornReport/ResourceQuery", method: "post" });
+}
+
+/** 按设备查询在制品 */
+export function WipByResourceQuery(data: { ResourceNames: string[] }) {
+  return request({ url: "/api/ReBornReport/WipByResourceQuery", method: "post", data });
+}
+
+/** 原材料反查成品（三层追溯） */
+export function RawMaterialThreeLayerTraceQuery(data: { RawMaterialBatch: string }) {
+  return request({
+    url: "/api/ReBornReport/RawMaterialThreeLayerTraceQuery",
+    method: "post",
+    data,
+  });
+}
+
 // 工单追溯报表：主查询及逐级明细
 export function MfgOrderReportQuery(data: any) {
   return request({ url: "/api/ReBornReport/MfgOrderReportQuery", method: "post", data });
