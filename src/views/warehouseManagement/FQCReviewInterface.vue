@@ -349,13 +349,21 @@
           </el-descriptions-item>
         </el-descriptions>
 
-        <div class="mb-3">
+        <div class="mb-3 flex items-center justify-between">
           <el-input
             v-model="inspectionSNKeyword"
             placeholder="请输入SN（支持模糊搜索）"
             clearable
             style="width: 260px"
           />
+          <el-button
+            type="success"
+            :loading="inspectionExportLoading"
+            :disabled="inspectionDetailLoading || inspectionDetailData.Rows.length === 0"
+            @click="handleInspectionDetailExport"
+          >
+            导出
+          </el-button>
         </div>
 
         <el-table
@@ -568,6 +576,7 @@ const wareHouseOptions = ref<any[]>([]);
 const auditDetailData = ref<any[]>([]); // 存储查询到的明细数据
 const inspectionDetailVisible = ref(false);
 const inspectionDetailLoading = ref(false);
+const inspectionExportLoading = ref(false);
 const inspectionSNKeyword = ref("");
 const inspectionDetailData = ref<{
   CompletionInboundNo: string;
@@ -710,6 +719,58 @@ const filterInspectionRows = (rows: any[]) => {
   return rows.filter((row: any) =>
     String(row?.SN ?? "").toLocaleLowerCase().includes(keyword),
   );
+};
+
+const formatInspectionExportTime = () => {
+  const now = new Date();
+  const part = (value: number) => String(value).padStart(2, "0");
+  return `${now.getFullYear()}${part(now.getMonth() + 1)}${part(now.getDate())}_${part(now.getHours())}${part(now.getMinutes())}${part(now.getSeconds())}`;
+};
+
+const handleInspectionDetailExport = async () => {
+  const rows = filterInspectionRows(inspectionDetailData.value.Rows);
+  if (rows.length === 0) {
+    ElMessage.warning("当前没有可导出的检验明细");
+    return;
+  }
+  if (inspectionExportLoading.value) return;
+
+  inspectionExportLoading.value = true;
+  try {
+    const XLSX = await import("xlsx");
+    const columns = inspectionDetailData.value.Columns;
+    const headers = ["序号", "批次", "结果", ...columns];
+    const values = rows.map((row: any, index: number) => [
+      index + 1,
+      row.SN ?? "",
+      displayInspectionValue(row.InspectionResult),
+      ...columns.map((column) => displayInspectionValue(row.values?.[column])),
+    ]);
+    const sheet = XLSX.utils.aoa_to_sheet([headers, ...values]);
+    sheet["!cols"] = headers.map((header, index) => ({
+      wch: index === 0
+        ? 8
+        : index === 1
+          ? 24
+          : Math.max(12, Math.min(36, Array.from(header).length * 2 + 6)),
+    }));
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, sheet, "检验明细");
+    const inboundNo = String(
+      inspectionDetailData.value.CompletionInboundNo || auditForm.value.CompletionInboundNo || "入库单",
+    ).replace(/[\\/:*?"<>|]/g, "_");
+    XLSX.writeFile(
+      workbook,
+      `FQC检验明细_${inboundNo}_${formatInspectionExportTime()}.xlsx`,
+    );
+    ElMessage.success("导出成功");
+  } catch (error) {
+    console.error("FQC检验明细导出失败", error);
+    ElMessage.error("导出失败，请稍后重试");
+  } finally {
+    inspectionExportLoading.value = false;
+  }
 };
 
 const handleViewInspectionDetail = async () => {

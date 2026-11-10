@@ -5,9 +5,14 @@
       <span>生产过站</span>
     </div>
 
-    <div class="flex flex-1 min-h-0 p-2 gap-2">
+    <div
+      ref="stationContentRef"
+      class="station-content flex-1 min-h-0 p-2"
+      :class="{ 'is-resizing': isStationResizing }"
+      :style="stationContentStyle"
+    >
       <!-- ====== 左半 1/2 ====== -->
-      <div class="flex-1 flex flex-col min-h-0 gap-2">
+      <div class="station-pane flex flex-col min-h-0 gap-2">
         <div class="bg-white rounded shadow-sm flex items-center gap-3 px-3 py-2">
           <span class="font-bold whitespace-nowrap">进站扫码：</span>
           <el-input v-model="barcode" placeholder="请扫描条码后回车" size="large" clearable
@@ -62,12 +67,12 @@
           </div>
         </div>
 
-        <div class="flex gap-2 flex-1 min-h-0">
-          <div class="flex-1 bg-white rounded shadow-sm flex flex-col min-h-0">
+        <div class="flex gap-2 flex-1 min-h-0 min-w-0">
+          <div class="flex-1 min-w-0 bg-white rounded shadow-sm flex flex-col min-h-0">
             <div class="h-[32px] flex items-center text-white bg-[#006487] px-3 flex-shrink-0 text-sm">
               <span>待上料</span>
             </div>
-            <div class="flex-1 p-2 overflow-auto">
+            <div class="flex-1 min-w-0 p-2 overflow-auto">
               <el-table :data="pendingFeedingData" size="small" border style="width:100%" empty-text="暂无待上料数据">
                 <el-table-column type="index" label="序号" width="45" align="center" />
                 <el-table-column prop="MaterialName" label="物料编码" min-width="120" show-overflow-tooltip />
@@ -76,11 +81,11 @@
               </el-table>
             </div>
           </div>
-          <div class="flex-1 bg-white rounded shadow-sm flex flex-col min-h-0">
+          <div class="flex-1 min-w-0 bg-white rounded shadow-sm flex flex-col min-h-0">
             <div class="h-[32px] flex items-center text-white bg-[#006487] px-3 flex-shrink-0 text-sm">
               <span>已上料</span>
             </div>
-            <div class="flex-1 p-2 overflow-auto">
+            <div class="flex-1 min-w-0 p-2 overflow-auto">
               <el-table :data="loadedMaterialsData" size="small" border style="width:100%" empty-text="暂无已上料数据">
                 <el-table-column type="index" label="序号" width="45" align="center" />
                 <el-table-column prop="MaterialName" label="物料编码" min-width="120" show-overflow-tooltip />
@@ -92,8 +97,20 @@
         </div>
       </div>
 
+      <div
+        class="station-splitter"
+        role="separator"
+        aria-orientation="vertical"
+        title="左右拖动调整模块宽度，双击恢复"
+        @dblclick="resetStationWidth"
+        @pointerdown="startStationResize"
+        @pointermove="handleStationResize"
+        @pointerup="stopStationResize"
+        @pointercancel="stopStationResize"
+      />
+
       <!-- ====== 右半 1/2：操作区 ====== -->
-      <div class="flex-1 bg-white rounded shadow-sm flex flex-col min-h-0">
+      <div class="station-pane bg-white rounded shadow-sm flex flex-col min-h-0">
         <div class="h-[35px] flex items-center text-white bg-[#006487] px-3 flex-shrink-0">
           <span>{{ rightTitle || '操作区' }}</span>
         </div>
@@ -325,7 +342,18 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import { useRouter } from "vue-router";
 import { useAppStore } from "@/stores/modules/app";
 import { useUserStoreWithOut } from "@/stores/modules/user";
+import { useHorizontalPaneResize } from "@/hooks/useHorizontalPaneResize";
 import { WorkCenterQuery, MfgLineQuery, ContainerOperationQuery, ContainerOperationExecution, ComponentIssueSNQuery, ContainerDataPointHistoryQuery, ContainerOperationUploadSpecAttachment } from "@/api/operate";
+
+const {
+  containerRef: stationContentRef,
+  gridStyle: stationContentStyle,
+  isResizing: isStationResizing,
+  resetPaneWidth: resetStationWidth,
+  resize: handleStationResize,
+  startResize: startStationResize,
+  stopResize: stopStationResize,
+} = useHorizontalPaneResize({ minLeft: 520, minRight: 520 });
 
 const router = useRouter();
 const { push } = router;
@@ -918,6 +946,45 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.station-content {
+  display: grid;
+  grid-template-columns: minmax(520px, 1fr) 8px minmax(520px, 1fr);
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.station-pane {
+  min-width: 0;
+}
+
+.station-splitter {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.station-splitter::before {
+  width: 1px;
+  content: "";
+  background: #d6dee8;
+  transition: width 0.15s ease, background-color 0.15s ease;
+}
+
+.station-splitter:hover::before,
+.station-content.is-resizing .station-splitter::before {
+  width: 3px;
+  background: #006487;
+}
+
+.station-content.is-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
 :deep(.is-error .el-input__wrapper) {
   box-shadow: 0 0 0 1px #f56c6c inset !important;
 }

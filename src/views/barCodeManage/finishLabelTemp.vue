@@ -14,6 +14,10 @@
                         <el-input v-model="getForm.ProductName" style="width: 160px" clearable @clear="getData"
                             @change="getData" />
                     </el-form-item>
+                    <el-form-item label="状态备注" prop="VN" class="mb-2">
+                        <el-input v-model="getForm.VN" style="width: 160px" clearable @clear="getData"
+                            @change="getData" />
+                    </el-form-item>
                     <el-form-item label="物料描述" prop="ProductDescript" class="mb-2">
                         <el-input v-model="getForm.ProductDescript" style="width: 160px" clearable @clear="getData"
                             @change="getData" />
@@ -506,8 +510,8 @@
                 <el-form-item label="物料描述" prop="ProductDescript">
                     <el-input v-model="ProductDescript" disabled style="width: 240px" />
                 </el-form-item>
-                <el-form-item label="名称" prop="RuleName">
-                    <el-input v-model="editForm.RuleName" style="width: 180px" />
+                <el-form-item label="状态备注" prop="VN">
+                    <el-input v-model="editForm.VN" disabled style="width: 180px" />
                 </el-form-item>
                 <el-form-item label="备注" prop="TemplateRemark">
                     <el-input v-model="editForm.TemplateRemark" type="textarea" style="width: 180px" />
@@ -999,6 +1003,7 @@ import { useUserStoreWithOut } from "@/stores/modules/user";
 import { cloneDeep } from "lodash-es";
 interface AddForm {
     RuleName: string;
+    VN?: string;
     ProductName: string;
     TemplateRemark: string;
     TemplateBox: string;
@@ -1031,6 +1036,7 @@ const userStore = useUserStoreWithOut();
 const getForm = ref({
     RuleName: "",
     ProductName: "",
+    VN: "",
     ProductDescript: "",
 });
 const tableData = ref([]);
@@ -1049,6 +1055,7 @@ const handleEdit = (row: any) => {
         // editForm.value={...res.content}
         editForm.value.ProductName = res.content.TemplatePartNum;
         editForm.value.RuleName = res.content.TemplateRuleName;
+        editForm.value.VN = res.content.VN || "";
         editForm.value.TemplateRemark = res.content.TemplateRemark;
         editForm.value.TemplateBox = res.content.TemplateBox;
         editForm.value.TemplateFuselage = res.content.TemplateFuselage;
@@ -1106,6 +1113,14 @@ const handleDelete = (row: any) => {
         });
 };
 const columnData = ref([
+    {
+        text: true,
+        prop: "VN",
+        label: "状态备注",
+        width: "140",
+        align: "1",
+        fixed: true,
+    },
     {
         text: true,
         prop: "Template_PartNum",
@@ -1233,6 +1248,7 @@ const addForm = ref<AddForm>({
 const editTempVisible = ref(false);
 const editForm = ref<AddForm>({
     RuleName: "",
+    VN: "",
     ProductName: "",
     TemplateRemark: "",
     TemplateBox: "",
@@ -1900,6 +1916,7 @@ const getBarCodeRule_TemContentRule = () => {
         // editForm.value={...res.content}
         editForm.value.ProductName = res.content.TemplatePartNum;
         editForm.value.RuleName = res.content.TemplateRuleName;
+        editForm.value.VN = res.content.VN || "";
         editForm.value.TemplateRemark = res.content.TemplateRemark;
         editForm.value.TemplateBox = res.content.TemplateBox;
         editForm.value.TemplateFuselage = res.content.TemplateFuselage;
@@ -1923,7 +1940,9 @@ const getBasMaterialData = (val: any) => {
         ProductDescript.value = data.Description;
     }
     QueryProductNameTemplateName({ ProductName: val }).then((res: any) => {
-        tempList.value = res.content;
+        const templateList = Array.isArray(res.content) ? res.content : [];
+        tempList.value = templateList;
+        editForm.value.VN = templateList[0]?.VN || "";
     });
 };
 const tabChange = () => {

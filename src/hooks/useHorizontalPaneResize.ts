@@ -17,6 +17,13 @@ export function useHorizontalPaneResize(options: ResizeOptions = {}) {
   let startX = 0;
   let startWidth = 0;
 
+  function getContentWidth(container: HTMLElement) {
+    const style = window.getComputedStyle(container);
+    const paddingLeft = Number.parseFloat(style.paddingLeft) || 0;
+    const paddingRight = Number.parseFloat(style.paddingRight) || 0;
+    return Math.max(0, container.clientWidth - paddingLeft - paddingRight);
+  }
+
   const gridStyle = computed(() =>
     leftPaneWidth.value === null
       ? {}
@@ -39,9 +46,10 @@ export function useHorizontalPaneResize(options: ResizeOptions = {}) {
 
   function resize(event: PointerEvent) {
     if (!isResizing.value || !containerRef.value) return;
+    const contentWidth = getContentWidth(containerRef.value);
     const maxLeft = Math.max(
       minLeft,
-      containerRef.value.getBoundingClientRect().width - splitterWidth - minRight,
+      contentWidth - splitterWidth - minRight,
     );
     leftPaneWidth.value = Math.round(
       Math.min(maxLeft, Math.max(minLeft, startWidth + event.clientX - startX)),

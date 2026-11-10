@@ -64,10 +64,10 @@
           <el-button
             type="success"
             :loading="exportLoading"
-            :disabled="!currentOrderRow || loading.details"
+            :disabled="selectedOrderRows.length === 0 || loading.orders"
             @click="handleExport"
           >
-            导出表格
+            导出表格{{ selectedOrderRows.length ? `（${selectedOrderRows.length}）` : "" }}
           </el-button>
         </el-form-item>
       </el-form>
@@ -99,12 +99,17 @@
             highlight-current-row
             row-key="MfgOrderName"
             @row-click="handleOrderRowClick"
+            @selection-change="handleOrderSelectionChange"
           >
+            <el-table-column type="selection" width="44" fixed="left" />
             <el-table-column type="index" label="序号" width="54" fixed="left" align="center" />
             <el-table-column prop="MfgOrderName" label="工单" width="155" fixed="left" show-overflow-tooltip />
             <el-table-column prop="VN" label="VN" width="125" fixed="left" show-overflow-tooltip />
             <el-table-column prop="SNFrom" label="SN起" width="155" fixed="left" show-overflow-tooltip />
             <el-table-column prop="SNTo" label="SN止" width="155" fixed="left" show-overflow-tooltip />
+            <el-table-column prop="FirstPassRate" label="直通率" width="90" fixed="left" align="center">
+              <template #default="scope">{{ displayValue(scope.row.FirstPassRate) }}</template>
+            </el-table-column>
             <el-table-column prop="SNCount" label="SN数" width="80" align="right" />
             <el-table-column prop="Qty" label="工单总数" width="95" align="right" />
             <el-table-column prop="MfgOrderComplete" label="完成数" width="85" align="right" />
@@ -162,6 +167,18 @@
                 <span v-else>-</span>
               </template>
             </el-table-column>
+            <el-table-column label="是否直通" width="90" align="center">
+              <template #default="scope">
+                <el-tag
+                  v-if="hasDisplayValue(scope.row.IsFirstPass)"
+                  size="small"
+                  :type="firstPassTagType(scope.row.IsFirstPass)"
+                >
+                  {{ formatFirstPassValue(scope.row.IsFirstPass) }}
+                </el-tag>
+                <span v-else>-</span>
+              </template>
+            </el-table-column>
             <el-table-column
               v-for="column in detailColumns"
               :key="column"
@@ -191,7 +208,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, reactive, ref } from "vue";
+import { computed, nextTick, onMounted, reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
 import { useHorizontalPaneResize } from "@/hooks/useHorizontalPaneResize";
 import {
@@ -204,6 +221,7 @@ type Row = Record<string, any>;
 type DetailRow = {
   SN: string;
   InspectionResult: any;
+  IsFirstPass: any;
   values: Record<string, any>;
 };
 
@@ -228,6 +246,7 @@ const emptyQuery = () => ({
 
 const queryForm = reactive(emptyQuery());
 const orderRows = ref<Row[]>([]);
+const selectedOrderRows = ref<Row[]>([]);
 const detailRows = ref<DetailRow[]>([]);
 const detailColumns = ref<string[]>([]);
 const currentMfgOrder = ref("");
@@ -297,6 +316,24 @@ function resultTagType(value: any): "success" | "danger" | "info" {
   return "info";
 }
 
+function hasDisplayValue(value: any) {
+  return value !== null && value !== undefined && value !== "";
+}
+
+function formatFirstPassValue(value: any) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (value === true || normalized === "true" || normalized === "1") return "是";
+  if (value === false || normalized === "false" || normalized === "0") return "否";
+  return value ?? "";
+}
+
+function firstPassTagType(value: any): "success" | "danger" | "info" {
+  const formatted = formatFirstPassValue(value);
+  if (formatted === "是") return "success";
+  if (formatted === "否") return "danger";
+  return "info";
+}
+
 function displayValue(value: any) {
   const formatted = formatInspectionValue(value);
   return formatted === "" || formatted === null || formatted === undefined ? "-" : formatted;
@@ -324,6 +361,7 @@ function pivotDetails(rows: Row[]) {
       rowMap.set(sn, {
         SN: sn,
         InspectionResult: item.InspectionResult ?? "",
+        IsFirstPass: item.IsFirstPass ?? "",
         values: {},
       });
     }
@@ -331,6 +369,9 @@ function pivotDetails(rows: Row[]) {
     const pivotRow = rowMap.get(sn)!;
     if (item.InspectionResult !== null && item.InspectionResult !== undefined && item.InspectionResult !== "") {
       pivotRow.InspectionResult = item.InspectionResult;
+    }
+    if (hasDisplayValue(item.IsFirstPass)) {
+      pivotRow.IsFirstPass = item.IsFirstPass;
     }
     if (itemName) {
       pivotRow.values[itemName] = item.ActualValue;
@@ -347,9 +388,9 @@ function formatExportTime() {
 }
 
 async function handleExport() {
-  const order = currentOrderRow.value;
-  if (!order) {
-    ElMessage.warning("请先选择左侧工单");
+  const orders = selectedOrderRows.value.filter((row) => row?.MfgOrderName);
+  if (orders.length === 0) {
+    ElMessage.warning("请先勾选左侧工单");
     return;
   }
   if (exportLoading.value) return;
@@ -357,67 +398,94 @@ async function handleExport() {
   exportLoading.value = true;
   try {
     const XLSX = await import("xlsx");
+    const detailResults = await Promise.all(
+      orders.map(async (order) => {
+        const orderName = String(order.MfgOrderName);
+        const response: any = await InspectionDetailReportQuery({
+          MfgOrderName: orderName,
+        });
+        if (!response || response.success === false) {
+          throw new Error(`${orderName}：${response?.msg || "检验历史查询失败"}`);
+        }
+        const pivotResult = pivotDetails(responseRows(response));
+        return {
+          order,
+          columns: pivotResult.columns,
+          rows: pivotResult.rows,
+        };
+      }),
+    );
+
     const orderHeaders = [
       "工单",
       "VN",
       "SN起",
       "SN止",
+      "直通率",
       "SN数",
       "工单总数",
       "完成数",
       "产品编码",
       "描述",
     ];
-    const orderValues = [
-      order.MfgOrderName ?? "",
-      order.VN ?? "",
-      order.SNFrom ?? "",
-      order.SNTo ?? "",
-      order.SNCount ?? "",
-      order.Qty ?? "",
-      order.MfgOrderComplete ?? "",
-      order.ProductName ?? "",
-      order.ProductDesc ?? "",
-    ];
-    const orderSheet = XLSX.utils.aoa_to_sheet([orderHeaders, orderValues]);
-    orderSheet["!cols"] = [
-      { wch: 22 },
-      { wch: 20 },
-      { wch: 22 },
-      { wch: 22 },
-      { wch: 10 },
-      { wch: 12 },
-      { wch: 10 },
-      { wch: 20 },
-      { wch: 30 },
-    ];
+    const sheetRows: any[][] = [];
 
-    const detailHeaders = ["序号", "批次", "结果", ...detailColumns.value];
-    const detailValues = detailRows.value.map((row, index) => [
-      index + 1,
-      row.SN,
-      displayValue(row.InspectionResult),
-      ...detailColumns.value.map((column) => displayValue(row.values[column])),
-    ]);
-    const detailSheet = XLSX.utils.aoa_to_sheet([detailHeaders, ...detailValues]);
-    detailSheet["!cols"] = detailHeaders.map((header, index) => ({
-      wch: index === 0
-        ? 8
-        : index === 1
-          ? 24
-          : Math.max(12, Math.min(36, Array.from(header).length * 2 + 6)),
+    detailResults.forEach((result) => {
+      const order = result.order;
+
+      sheetRows.push(orderHeaders);
+      sheetRows.push([
+        order.MfgOrderName ?? "",
+        order.VN ?? "",
+        order.SNFrom ?? "",
+        order.SNTo ?? "",
+        order.FirstPassRate ?? "",
+        order.SNCount ?? "",
+        order.Qty ?? "",
+        order.MfgOrderComplete ?? "",
+        order.ProductName ?? "",
+        order.ProductDesc ?? "",
+      ]);
+
+      const historyHeaders = ["序号", "批次", "结果", "是否直通", ...result.columns];
+      sheetRows.push(historyHeaders);
+
+      if (result.rows.length === 0) {
+        sheetRows.push(["无检验历史"]);
+      } else {
+        result.rows.forEach((row, historyIndex) => {
+          sheetRows.push([
+            historyIndex + 1,
+            row.SN,
+            displayValue(row.InspectionResult),
+            hasDisplayValue(row.IsFirstPass) ? formatFirstPassValue(row.IsFirstPass) : "-",
+            ...result.columns.map((column) => displayValue(row.values[column])),
+          ]);
+        });
+      }
+    });
+
+    const combinedSheet = XLSX.utils.aoa_to_sheet(sheetRows);
+    const maxColumnCount = Math.max(
+      orderHeaders.length,
+      ...detailResults.map((result) => result.columns.length + 4),
+    );
+    const orderColumnWidths = [22, 24, 22, 22, 12, 10, 12, 10, 20, 30];
+    combinedSheet["!cols"] = Array.from({ length: maxColumnCount }, (_, index) => ({
+      wch: orderColumnWidths[index] ?? 16,
     }));
 
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, orderSheet, "工单信息");
-    XLSX.utils.book_append_sheet(workbook, detailSheet, "检验明细");
+    XLSX.utils.book_append_sheet(workbook, combinedSheet, "工单及检验历史");
 
-    const safeOrderName = String(order.MfgOrderName || "工单").replace(/[\\/:*?"<>|]/g, "_");
-    XLSX.writeFile(workbook, `检验明细报表_${safeOrderName}_${formatExportTime()}.xlsx`);
+    XLSX.writeFile(
+      workbook,
+      `检验明细报表_${orders.length}张工单_${formatExportTime()}.xlsx`,
+    );
     ElMessage.success("导出成功");
-  } catch (error) {
+  } catch (error: any) {
     console.error("检验明细报表导出失败", error);
-    ElMessage.error("导出失败，请稍后重试");
+    ElMessage.error(error?.message || "导出失败，请稍后重试");
   } finally {
     exportLoading.value = false;
   }
@@ -435,6 +503,8 @@ async function handleQuery() {
 
   const requestId = ++orderRequestId;
   hasQueried.value = true;
+  selectedOrderRows.value = [];
+  orderTableRef.value?.clearSelection();
   orderRows.value = [];
   resetDetail();
   loading.orders = true;
@@ -461,6 +531,8 @@ async function handleQuery() {
 function handleReset() {
   orderRequestId += 1;
   Object.assign(queryForm, emptyQuery());
+  selectedOrderRows.value = [];
+  orderTableRef.value?.clearSelection();
   orderRows.value = [];
   hasQueried.value = false;
   loading.orders = false;
@@ -470,6 +542,10 @@ function handleReset() {
 
 async function handleOrderRowClick(row: Row) {
   await loadInspectionDetails(row);
+}
+
+function handleOrderSelectionChange(rows: Row[]) {
+  selectedOrderRows.value = rows;
 }
 
 async function loadInspectionDetails(row: Row) {
@@ -502,6 +578,10 @@ async function loadInspectionDetails(row: Row) {
     if (requestId === detailRequestId) loading.details = false;
   }
 }
+
+onMounted(() => {
+  handleQuery();
+});
 </script>
 
 <style scoped lang="scss">
