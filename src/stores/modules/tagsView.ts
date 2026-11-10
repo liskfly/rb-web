@@ -10,13 +10,16 @@ export interface TagsViewState {
   visitedViews: RouteLocationNormalizedLoaded[]
   cachedViews: Set<string>
   selectedTag?: RouteLocationNormalizedLoaded
+  // 各页面重新渲染计数，用于刷新当前页面
+  reloadMap: Record<string, number>
 }
 
 export const useTagsViewStore = defineStore('tagsView', {
   state: (): TagsViewState => ({
     visitedViews: [],
     cachedViews: new Set(),
-    selectedTag: undefined
+    selectedTag: undefined,
+    reloadMap: {}
   }),
   getters: {
     getVisitedViews(): RouteLocationNormalizedLoaded[] {
@@ -153,6 +156,10 @@ export const useTagsViewStore = defineStore('tagsView', {
           break
         }
       }
+    },
+    // 触发指定页面重新渲染
+    triggerReload(path: string) {
+      this.reloadMap[path] = (this.reloadMap[path] || 0) + 1
     }
   },
   persist: false

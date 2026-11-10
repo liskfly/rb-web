@@ -87,6 +87,7 @@
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
           :pager-count="5"
+          size="small"
           :current-page="pageObj.currentPage"
           :page-size="pageObj.pageSize"
           :page-sizes="[30, 50, 100, 200, 300]"
@@ -271,3 +272,9 @@ onBeforeUnmount(() => {
   window.removeEventListener("resize", updateTableHeight);
 });
 </script>
+
+<style scoped>
+.el-pagination {
+  justify-content: center;
+}
+</style>

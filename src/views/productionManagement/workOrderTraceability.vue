@@ -3,125 +3,63 @@
     <el-card shadow="never" class="query-card" :body-style="{ padding: '12px 12px 4px' }">
       <el-form :model="queryForm" inline size="small" label-width="76px" @submit.prevent>
         <el-form-item label="工单">
-          <el-input
-            v-model="queryForm.MfgOrderName"
-            clearable
-            placeholder="请输入工单号（支持模糊搜索）"
-            @keyup.enter="handleQuery"
-          />
+          <el-input v-model="queryForm.MfgOrderName" clearable placeholder="请输入工单号（支持模糊搜索）"
+            @keyup.enter="handleQuery" />
         </el-form-item>
         <el-form-item label="VN">
-          <el-input
-            v-model="queryForm.VN"
-            clearable
-            placeholder="请输入VN（支持模糊搜索）"
-            @keyup.enter="handleQuery"
-          />
+          <el-input v-model="queryForm.VN" clearable placeholder="请输入VN（支持模糊搜索）" @keyup.enter="handleQuery" />
         </el-form-item>
         <el-form-item label="SN">
-          <el-input
-            v-model="queryForm.SN"
-            clearable
-            placeholder="流转批次 / 成品条码"
-            @keyup.enter="handleQuery"
-          />
+          <el-input v-model="queryForm.SN" clearable placeholder="流转批次 / 成品条码" @keyup.enter="handleQuery" />
         </el-form-item>
         <el-form-item label="存货代码">
-          <el-select-v2
-            v-model="queryForm.InvAddCode"
-            :options="selectOptions.invAddCodes"
-            clearable
-            filterable
-            placeholder="请选择存货代码"
-          />
+          <el-select-v2 v-model="queryForm.InvAddCode" :options="selectOptions.invAddCodes" clearable filterable
+            placeholder="请选择存货代码" />
         </el-form-item>
         <el-form-item label="计划时间">
-          <el-date-picker
-            v-model="plannedDate"
-            type="daterange"
-            :shortcuts="dateShortcuts"
-            value-format="YYYY-MM-DD"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            range-separator="至"
-            clearable
-          />
+          <el-date-picker v-model="plannedDate" type="daterange" :shortcuts="dateShortcuts" value-format="YYYY-MM-DD"
+            start-placeholder="开始日期" end-placeholder="结束日期" range-separator="至" clearable />
+        </el-form-item>
+
+        <el-form-item label="">
+          <el-checkbox v-model="excludeOfflineAndPaused" @change="handleQuery">
+            过滤下线与暂停工单
+          </el-checkbox>
         </el-form-item>
 
         <template v-if="showMore">
           <div class="more-conditions-overlay">
             <el-form-item label="产品">
-            <el-select-v2
-              v-model="queryForm.ProductName"
-              :options="selectOptions.products"
-              clearable
-              filterable
-              placeholder="请选择产品"
-            />
+              <el-select-v2 v-model="queryForm.ProductName" :options="selectOptions.products" clearable filterable
+                placeholder="请选择产品" />
             </el-form-item>
             <el-form-item label="产品类型">
-            <el-select-v2
-              v-model="queryForm.ProductTypeName"
-              :options="selectOptions.productTypes"
-              clearable
-              filterable
-              placeholder="请选择"
-            />
+              <el-select-v2 v-model="queryForm.ProductTypeName" :options="selectOptions.productTypes" clearable
+                filterable placeholder="请选择" />
             </el-form-item>
             <el-form-item label="产品型号">
-            <el-select-v2
-              v-model="queryForm.ProductFamilyName"
-              :options="selectOptions.productFamilies"
-              clearable
-              filterable
-              placeholder="请选择"
-            />
+              <el-select-v2 v-model="queryForm.ProductFamilyName" :options="selectOptions.productFamilies" clearable
+                filterable placeholder="请选择" />
             </el-form-item>
             <el-form-item label="工艺流程">
-            <el-select-v2
-              v-model="queryForm.WorkflowName"
-              :options="selectOptions.workflows"
-              clearable
-              filterable
-              placeholder="请选择"
-            />
+              <el-select-v2 v-model="queryForm.WorkflowName" :options="selectOptions.workflows" clearable filterable
+                placeholder="请选择" />
             </el-form-item>
             <el-form-item label="订单类型">
-            <el-select-v2
-              v-model="queryForm.OrderTypeName"
-              :options="selectOptions.orderTypes"
-              clearable
-              filterable
-              placeholder="请选择"
-            />
+              <el-select-v2 v-model="queryForm.OrderTypeName" :options="selectOptions.orderTypes" clearable filterable
+                placeholder="请选择" />
             </el-form-item>
             <el-form-item label="状态">
-            <el-select-v2
-              v-model="queryForm.OrderStatusName"
-              :options="selectOptions.orderStatuses"
-              clearable
-              filterable
-              placeholder="请选择"
-            />
+              <el-select-v2 v-model="queryForm.OrderStatusName" :options="selectOptions.orderStatuses" clearable
+                filterable placeholder="请选择" />
             </el-form-item>
             <el-form-item label="车间">
-            <el-select-v2
-              v-model="queryForm.WorkCenterName"
-              :options="selectOptions.workCenters"
-              clearable
-              filterable
-              placeholder="请选择"
-              @change="handleWorkCenterChange"
-            />
+              <el-select-v2 v-model="queryForm.WorkCenterName" :options="selectOptions.workCenters" clearable filterable
+                placeholder="请选择" @change="handleWorkCenterChange" />
             </el-form-item>
             <el-form-item label="产线">
-            <el-select-v2
-              v-model="queryForm.MfgLineName"
-              :options="selectOptions.mfgLines"
-              clearable
-              filterable
-              placeholder="请选择"
-            />
+              <el-select-v2 v-model="queryForm.MfgLineName" :options="selectOptions.mfgLines" clearable filterable
+                placeholder="请选择" />
             </el-form-item>
             <el-form-item label="领料单号">
               <el-input v-model="queryForm.PickingOrderNo" clearable placeholder="请输入领料单号" />
@@ -145,12 +83,8 @@
       </el-form>
     </el-card>
 
-    <div
-      ref="contentGridRef"
-      class="content-grid"
-      :class="{ 'is-resizing': isPanelResizing }"
-      :style="contentGridStyle"
-    >
+    <div ref="contentGridRef" class="content-grid" :class="{ 'is-resizing': isPanelResizing }"
+      :style="contentGridStyle">
       <el-card shadow="never" class="panel-card order-panel" :body-style="panelBodyStyle">
         <template #header>
           <div class="panel-title">
@@ -159,34 +93,15 @@
           </div>
         </template>
         <div class="order-table-wrap">
-          <el-table
-            v-loading="loading.orders"
-            :data="pagedOrderRows"
-            border
-            stripe
-            size="small"
-            highlight-current-row
-            height="100%"
-            row-key="MfgOrderName"
-            @row-click="handleOrderRowClick"
-            @sort-change="handleOrderSortChange"
-          >
+          <el-table v-loading="loading.orders" :data="pagedOrderRows" border stripe size="small" highlight-current-row
+            height="100%" row-key="MfgOrderName" @row-click="handleOrderRowClick" @sort-change="handleOrderSortChange">
             <el-table-column type="index" label="序号" width="54" fixed>
               <template #default="scope">
                 {{ (orderPage.current - 1) * orderPage.size + scope.$index + 1 }}
               </template>
             </el-table-column>
-            <el-table-column
-              v-for="column in orderColumns"
-              :key="column.prop"
-              :prop="column.prop"
-              :label="column.label"
-              :width="column.width"
-              :fixed="column.fixed"
-              :align="column.align"
-              sortable="custom"
-              show-overflow-tooltip
-            >
+            <el-table-column v-for="column in orderColumns" :key="column.prop" :prop="column.prop" :label="column.label"
+              :width="column.width" :fixed="column.fixed" :align="column.align" sortable="custom" show-overflow-tooltip>
               <template #default="scope">
                 <span v-if="column.prop === 'SNRange'">{{ formatOrderSNRange(scope.row) }}</span>
                 <span v-else>{{ scope.row[column.prop] }}</span>
@@ -197,31 +112,17 @@
             </template>
           </el-table>
         </div>
-        <el-pagination
-          v-model:current-page="orderPage.current"
-          v-model:page-size="orderPage.size"
-          class="order-pagination"
-          background
-          small
-          :page-sizes="[30, 50, 100, 200]"
-          layout="total, sizes, prev, pager, next"
-          :total="orderRows.length"
-        />
+        <el-pagination v-model:current-page="orderPage.current" v-model:page-size="orderPage.size"
+          class="order-pagination" background small :page-sizes="[30, 50, 100, 200]"
+          layout="total, sizes, prev, pager, next" :total="orderRows.length" />
       </el-card>
 
-      <div
-        class="panel-splitter"
-        role="separator"
-        aria-orientation="vertical"
-        title="左右拖动调整表格宽度，双击恢复"
-        @dblclick="resetPanelWidth"
-        @pointerdown="startPanelResize"
-        @pointermove="handlePanelResize"
-        @pointerup="stopPanelResize"
-        @pointercancel="stopPanelResize"
-      />
+      <div class="panel-splitter" role="separator" aria-orientation="vertical" title="左右拖动调整表格宽度，双击恢复"
+        @dblclick="resetPanelWidth" @pointerdown="startPanelResize" @pointermove="handlePanelResize"
+        @pointerup="stopPanelResize" @pointercancel="stopPanelResize" />
 
-      <el-card shadow="never" class="panel-card detail-panel" :body-style="panelBodyStyle">
+      <el-card shadow="never" class="panel-card detail-panel" :class="{ 'is-v-resizing': Boolean(verticalResizeKind) }"
+        :body-style="panelBodyStyle">
         <template #header>
           <div class="panel-title">
             <span>工单明细</span>
@@ -239,51 +140,24 @@
           <el-tab-pane label="完工入库" name="completion" />
         </el-tabs>
 
-        <div class="primary-table-wrap" :class="{ 'with-lot-detail': showLotDetail }">
-          <el-table
-            v-loading="loading.primary"
-            :data="primaryRows"
-            border
-            stripe
-            size="small"
-            highlight-current-row
-            height="100%"
-            @row-click="handlePrimaryRowClick"
-          >
+        <div class="primary-table-wrap" :class="{ 'with-lot-detail': showLotDetail }" :style="primaryPaneStyle">
+          <el-table v-loading="loading.primary" :data="primaryRows" border stripe size="small" highlight-current-row
+            height="100%" @row-click="handlePrimaryRowClick">
             <el-table-column type="index" label="序号" width="54" fixed />
-            <el-table-column
-              v-for="column in primaryColumns"
-              :key="column.prop"
-              :prop="column.prop"
-              :label="column.label"
-              :width="column.width"
-              show-overflow-tooltip
-            >
+            <el-table-column v-for="column in primaryColumns" :key="column.prop" :prop="column.prop"
+              :label="column.label" :width="column.width" show-overflow-tooltip>
               <template #default="scope">
-                <el-tag
-                  v-if="column.prop === 'InProcess'"
-                  size="small"
-                  :type="scope.row[column.prop] ? 'success' : 'info'"
-                >
+                <el-tag v-if="column.prop === 'InProcess'" size="small"
+                  :type="scope.row[column.prop] ? 'success' : 'info'">
                   {{ scope.row[column.prop] ? "是" : "否" }}
                 </el-tag>
                 <span v-else>{{ scope.row[column.prop] }}</span>
               </template>
             </el-table-column>
-            <el-table-column
-              v-if="currentTab === 'containers'"
-              label="附件"
-              width="120"
-              fixed="right"
-              align="center"
-            >
+            <el-table-column v-if="currentTab === 'containers'" label="附件" width="120" fixed="right" align="center">
               <template #default="scope">
-                <el-button
-                  type="primary"
-                  link
-                  :disabled="getAttachmentCount(scope.row.SN) === 0"
-                  @click.stop="openAttachmentDownload(scope.row)"
-                >
+                <el-button type="primary" link :disabled="getAttachmentCount(scope.row.SN) === 0"
+                  @click.stop="openAttachmentDownload(scope.row)">
                   下载附件{{ getAttachmentCount(scope.row.SN) ? `(${getAttachmentCount(scope.row.SN)})` : '' }}
                 </el-button>
               </template>
@@ -293,6 +167,10 @@
             </template>
           </el-table>
         </div>
+
+        <div v-if="showLotDetail" class="vertical-splitter" role="separator" aria-orientation="horizontal"
+          title="上下拖动调整表格高度，双击恢复" @dblclick="resetPrimaryHeight" @pointerdown="startVerticalResize('primary', $event)"
+          @pointermove="handleVerticalResize" @pointerup="stopVerticalResize" @pointercancel="stopVerticalResize" />
 
         <div v-if="showLotDetail" class="lot-detail">
           <div class="lot-heading">
@@ -305,77 +183,46 @@
             <el-tab-pane label="物料消耗" name="consume" />
           </el-tabs>
           <div class="lot-table-wrap" :class="{ 'with-consume-detail': showConsumeDetail }">
-            <el-table
-              v-loading="loading.lot"
-              :data="lotRows"
-              border
-              stripe
-              size="small"
-              highlight-current-row
-              height="100%"
-              @row-click="handleLotRowClick"
-            >
+            <el-table v-loading="loading.lot" :data="lotRows" border stripe size="small" highlight-current-row
+              height="100%" @row-click="handleLotRowClick">
               <el-table-column type="index" label="序号" width="54" fixed />
-              <el-table-column
-                v-for="column in lotColumns"
-                :key="column.prop"
-                :prop="column.prop"
-                :label="column.label"
-                :width="column.width"
-                show-overflow-tooltip
-              />
+              <el-table-column v-for="column in lotColumns" :key="column.prop" :prop="column.prop" :label="column.label"
+                :width="column.width" show-overflow-tooltip />
               <template #empty>
                 <el-empty description="暂无 SN 明细" :image-size="60" />
               </template>
             </el-table>
           </div>
 
-          <div v-if="showConsumeDetail" class="consume-detail">
+          <div v-if="showConsumeDetail" class="vertical-splitter" role="separator" aria-orientation="horizontal"
+            title="上下拖动调整表格高度，双击恢复" @dblclick="resetConsumeHeight" @pointerdown="startVerticalResize('consume', $event)"
+            @pointermove="handleVerticalResize" @pointerup="stopVerticalResize" @pointercancel="stopVerticalResize" />
+
+          <div v-if="showConsumeDetail" class="consume-detail" :style="consumePaneStyle">
             <div class="consume-heading">
               <span>消耗明细</span>
               <el-tag size="small" type="warning">TxnId：{{ currentTxnId }}</el-tag>
             </div>
-            <el-table
-              v-loading="loading.consumeDetail"
-              :data="consumeDetailRows"
-              border
-              stripe
-              size="small"
-              height="150"
-            >
-              <el-table-column type="index" label="序号" width="54" fixed />
-              <el-table-column
-                v-for="column in consumeDetailColumns"
-                :key="column.prop"
-                :prop="column.prop"
-                :label="column.label"
-                :width="column.width"
-                show-overflow-tooltip
-              />
-              <template #empty>
-                <el-empty description="暂无消耗明细" :image-size="54" />
-              </template>
-            </el-table>
+            <div class="consume-table-wrap">
+              <el-table v-loading="loading.consumeDetail" :data="consumeDetailRows" border stripe size="small"
+                height="100%">
+                <el-table-column type="index" label="序号" width="54" fixed />
+                <el-table-column v-for="column in consumeDetailColumns" :key="column.prop" :prop="column.prop"
+                  :label="column.label" :width="column.width" show-overflow-tooltip />
+                <template #empty>
+                  <el-empty description="暂无消耗明细" :image-size="54" />
+                </template>
+              </el-table>
+            </div>
           </div>
         </div>
       </el-card>
     </div>
 
-    <el-dialog
-      v-model="attachmentDialogVisible"
-      :title="`附件下载 - ${attachmentDialogSN || '-'}`"
-      draggable
-      width="820px"
-      :close-on-click-modal="false"
-      align-center
-    >
-      <el-table
-        v-if="attachmentDownloadRows.length > 0"
-        :data="attachmentDownloadRows"
-        size="small"
-        border
-        max-height="460"
-      >
+    <el-dialog v-model="attachmentDialogVisible" :title="`附件下载 - ${attachmentDialogSN || '-'}`" draggable width="820px"
+      :close-on-click-modal="false" align-center>
+      <el-table v-if="attachmentDownloadRows.length > 0" :data="attachmentDownloadRows" size="small" border
+        max-height="460">
         <el-table-column prop="SpecName" label="工序" width="140" show-overflow-tooltip />
         <el-table-column prop="FileName" label="文件名" min-width="210" show-overflow-tooltip />
         <el-table-column label="大小" width="90" align="right">
@@ -487,6 +334,7 @@ const dateShortcuts = [
   { text: "最近一个月", value: () => getRecentDateRange(30) },
 ];
 const showMore = ref(false);
+const excludeOfflineAndPaused = ref(false);
 const currentMfgOrder = ref("");
 const currentSN = ref("");
 const currentTxnId = ref("");
@@ -765,6 +613,77 @@ const primaryEmptyText = computed(() =>
   currentMfgOrder.value ? "暂无明细数据" : "请先选择左侧工单",
 );
 
+type VerticalResizeKind = "primary" | "consume";
+
+const primaryHeight = ref<number | null>(null);
+const consumeHeight = ref<number | null>(null);
+const verticalResizeKind = ref<VerticalResizeKind | "">("");
+let verticalResizeStartY = 0;
+let verticalResizeStartSize = 0;
+let verticalResizeContainer: HTMLElement | null = null;
+
+const primaryPaneStyle = computed(() =>
+  showLotDetail.value && primaryHeight.value !== null
+    ? { flex: `0 0 ${primaryHeight.value}px` }
+    : {},
+);
+
+const consumePaneStyle = computed(() =>
+  consumeHeight.value !== null ? { flex: `0 0 ${consumeHeight.value}px` } : {},
+);
+
+function clampSize(value: number, min: number, max: number) {
+  return Math.round(Math.min(max, Math.max(min, value)));
+}
+
+function startVerticalResize(kind: VerticalResizeKind, event: PointerEvent) {
+  const splitter = event.currentTarget as HTMLElement | null;
+  if (!splitter) return;
+  const target = (
+    kind === "primary" ? splitter.previousElementSibling : splitter.nextElementSibling
+  ) as HTMLElement | null;
+  if (!target?.parentElement) return;
+
+  event.preventDefault();
+  verticalResizeContainer = target.parentElement;
+  verticalResizeStartY = event.clientY;
+  verticalResizeStartSize = target.getBoundingClientRect().height;
+  verticalResizeKind.value = kind;
+  splitter.setPointerCapture?.(event.pointerId);
+}
+
+function handleVerticalResize(event: PointerEvent) {
+  if (!verticalResizeKind.value || !verticalResizeContainer) return;
+  const containerHeight = verticalResizeContainer.getBoundingClientRect().height;
+  const delta = event.clientY - verticalResizeStartY;
+
+  if (verticalResizeKind.value === "primary") {
+    const max = Math.max(140, containerHeight - 8 - 180);
+    primaryHeight.value = clampSize(verticalResizeStartSize + delta, 140, max);
+  } else {
+    const max = Math.max(90, containerHeight - 8 - 120);
+    consumeHeight.value = clampSize(verticalResizeStartSize - delta, 90, max);
+  }
+}
+
+function stopVerticalResize(event: PointerEvent) {
+  if (!verticalResizeKind.value) return;
+  verticalResizeKind.value = "";
+  const splitter = event.currentTarget as HTMLElement | null;
+  if (splitter?.hasPointerCapture?.(event.pointerId)) {
+    splitter.releasePointerCapture(event.pointerId);
+  }
+  verticalResizeContainer = null;
+}
+
+function resetPrimaryHeight() {
+  primaryHeight.value = null;
+}
+
+function resetConsumeHeight() {
+  consumeHeight.value = null;
+}
+
 function optionLabel(item: Row, valueKey: string, descriptionKeys: string[]) {
   const value = item[valueKey] ?? "";
   const description = descriptionKeys.map((key) => item[key]).find(Boolean);
@@ -848,7 +767,10 @@ function buildQueryPayload() {
 }
 
 function buildOrderQueryPayload() {
-  return buildQueryPayload();
+  return {
+    ...buildQueryPayload(),
+    ExcludeOfflineAndPaused: excludeOfflineAndPaused.value,
+  };
 }
 
 function handleOrderSortChange({ prop, order }: { prop?: string; order?: "ascending" | "descending" | null }) {
@@ -903,7 +825,7 @@ function downloadAttachment(file: AttachmentFile) {
     const dataUriMatch = rawBase64.match(/^data:([^;,]+)?;base64,(.*)$/s);
     const mimeType = dataUriMatch?.[1] || "application/octet-stream";
     const base64 = (dataUriMatch?.[2] || rawBase64).replace(/\s/g, "");
-    const parts: Uint8Array[] = [];
+    const parts: BlobPart[] = [];
     const chunkSize = 32768;
     for (let offset = 0; offset < base64.length; offset += chunkSize) {
       const binary = window.atob(base64.slice(offset, offset + chunkSize));
@@ -937,6 +859,9 @@ function resetDrillDown() {
   primaryRows.value = [];
   lotRows.value = [];
   consumeDetailRows.value = [];
+  primaryHeight.value = null;
+  consumeHeight.value = null;
+  verticalResizeKind.value = "";
   resetAttachmentDownload();
 }
 
@@ -955,6 +880,7 @@ async function handleQuery() {
 async function handleReset() {
   Object.assign(queryForm, emptyQuery());
   plannedDate.value = getRecentDateStrings(30);
+  excludeOfflineAndPaused.value = false;
   await loadMfgLines();
   await handleQuery();
 }
@@ -969,6 +895,7 @@ async function handleOrderRowClick(row: Row) {
   currentTxnId.value = "";
   lotRows.value = [];
   consumeDetailRows.value = [];
+  consumeHeight.value = null;
   resetAttachmentDownload();
   await loadPrimaryRows();
 }
@@ -979,6 +906,7 @@ async function handlePrimaryTabChange(name: string | number) {
   currentTxnId.value = "";
   lotRows.value = [];
   consumeDetailRows.value = [];
+  consumeHeight.value = null;
   resetAttachmentDownload();
   if (currentMfgOrder.value) await loadPrimaryRows();
 }
@@ -995,8 +923,8 @@ async function loadPrimaryRows() {
   primaryRows.value = [];
   resetAttachmentDownload();
   try {
-    const response = await apiMap[currentTab.value]({
-      ...buildOrderQueryPayload(),
+    const response: any = await apiMap[currentTab.value]({
+      ...buildQueryPayload(),
       MfgOrderName: currentMfgOrder.value,
     });
     primaryRows.value = responseRows(response);
@@ -1030,6 +958,7 @@ async function handleLotTabChange(name: string | number) {
   lotTab.value = String(name) as LotTab;
   currentTxnId.value = "";
   consumeDetailRows.value = [];
+  consumeHeight.value = null;
   if (currentSN.value) await loadLotRows();
 }
 
@@ -1204,6 +1133,40 @@ onMounted(async () => {
   }
 }
 
+.vertical-splitter {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex: 0 0 8px;
+  align-items: center;
+  justify-content: center;
+  cursor: row-resize;
+  touch-action: none;
+
+  &::before {
+    width: 100%;
+    height: 1px;
+    content: "";
+    background: #d6dee8;
+    transition: height 0.15s ease, background-color 0.15s ease;
+  }
+
+  &:hover::before {
+    height: 3px;
+    background: var(--el-color-primary);
+  }
+}
+
+.detail-panel.is-v-resizing {
+  cursor: row-resize;
+  user-select: none;
+
+  .vertical-splitter::before {
+    height: 3px;
+    background: var(--el-color-primary);
+  }
+}
+
 .content-grid.is-resizing {
   cursor: col-resize;
   user-select: none;
@@ -1331,11 +1294,21 @@ onMounted(async () => {
 }
 
 .consume-detail {
-  flex: 0 0 auto;
+  display: flex;
+  flex: 0 0 190px;
+  flex-direction: column;
+  box-sizing: border-box;
+  min-height: 0;
   padding-top: 8px;
 }
 
+.consume-table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .consume-heading {
+  flex: 0 0 auto;
   margin-bottom: 6px;
 }
 
@@ -1349,6 +1322,7 @@ onMounted(async () => {
   }
 
   .query-card {
+
     :deep(.el-input),
     :deep(.el-select),
     :deep(.el-select-v2) {

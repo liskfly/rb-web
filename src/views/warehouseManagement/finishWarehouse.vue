@@ -71,7 +71,7 @@
 
       <div class="mt-2">
         <el-pagination background @size-change="handleSizeChange" @current-change="handleCurrentChange"
-          :pager-count="5" :current-page="pageObj.currentPage" :page-size="pageObj.pageSize"
+          :pager-count="5" size="small" :current-page="pageObj.currentPage" :page-size="pageObj.pageSize"
           :page-sizes="[30, 50, 100, 200, 300]" layout="total,sizes, prev, pager, next" :total="total" />
       </div>
     </el-card>
@@ -706,3 +706,9 @@ const updateTableHeight = () => { tableHeight.value = window.innerHeight - 220; 
 onMounted(() => { updateTableHeight(); window.addEventListener("resize", updateTableHeight); getData(); });
 onBeforeUnmount(() => { window.removeEventListener("resize", updateTableHeight); });
 </script>
+
+<style scoped>
+.el-pagination {
+  justify-content: center;
+}
+</style>

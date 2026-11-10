@@ -1,11 +1,12 @@
-import { useTagsViewStoreWithOut } from '@/stores/modules/tagsView'
+import { useTagsViewStore } from '@/stores/modules/tagsView'
 import { type RouteLocationNormalizedLoaded, useRouter } from 'vue-router'
 import { computed, nextTick, unref } from 'vue'
 
 export const useTagsView = () => {
-  const tagsViewStore = useTagsViewStoreWithOut()
+  // 必须使用当前应用安装的 pinia 实例，保证与页面读取的是同一份状态
+  const tagsViewStore = useTagsViewStore()
 
-  const { replace, currentRoute } = useRouter()
+  const { currentRoute } = useRouter()
 
   const selectedTag = computed(() => tagsViewStore.getSelectedTag)
 
@@ -37,13 +38,10 @@ export const useTagsView = () => {
   }
 
   const refreshPage = async (view?: RouteLocationNormalizedLoaded, callback?: Fn) => {
+    const route = view || unref(currentRoute)
     tagsViewStore.delCachedView()
-    const { path, query } = view || unref(currentRoute)
     await nextTick()
-    replace({
-      path: '/redirect' + path,
-      query: query
-    })
+    tagsViewStore.triggerReload(route.path)
     callback?.()
   }
 

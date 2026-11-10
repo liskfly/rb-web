@@ -217,6 +217,7 @@
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
           :pager-count="5"
+          size="small"
           :current-page="pageObj.currentPage"
           :page-size="pageObj.pageSize"
           :page-sizes="[30, 50, 100, 200, 300]"
@@ -566,5 +567,9 @@ onBeforeUnmount(() => {
 <style scoped lang="scss">
 .material-picking-table :deep(.el-table__body tr:hover > td.el-table__cell) {
   background-color: #cfe3fb !important;
+}
+
+.el-pagination {
+  justify-content: center;
 }
 </style>

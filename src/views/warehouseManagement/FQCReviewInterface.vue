@@ -3,87 +3,37 @@
     <el-card shadow="always" :body-style="{ padding: '8px' }">
       <div class="flex justify-between items-start">
         <div></div>
-        <el-form
-          ref="queryFormRef"
-          size="small"
-          :model="queryForm"
-          label-width="auto"
-          :inline="true"
-        >
+        <el-form ref="queryFormRef" size="small" :model="queryForm" label-width="auto" :inline="true">
           <el-form-item label="入库单号" class="mb-2">
-            <el-input
-              v-model="queryForm.CompletionInboundNo"
-              style="width: 160px"
-              clearable
-              @clear="getData"
-              @change="getData"
-            />
+            <el-input v-model="queryForm.CompletionInboundNo" style="width: 160px" clearable @clear="getData"
+              @change="getData" />
           </el-form-item>
           <el-form-item label="工单号" class="mb-2">
-            <el-input
-              v-model="queryForm.MfgOrder"
-              style="width: 160px"
-              clearable
-              @clear="getData"
-              @change="getData"
-            />
+            <el-input v-model="queryForm.MfgOrder" style="width: 160px" clearable @clear="getData" @change="getData" />
           </el-form-item>
           <el-form-item label="VN" class="mb-2">
-            <el-input
-              v-model="queryForm.VN"
-              style="width: 160px"
-              clearable
-              @clear="getData"
-              @change="getData"
-            />
+            <el-input v-model="queryForm.VN" style="width: 160px" clearable @clear="getData" @change="getData" />
           </el-form-item>
           <el-form-item label="产品编码" class="mb-2">
-            <el-input
-              v-model="queryForm.Product"
-              style="width: 160px"
-              clearable
-              @clear="getData"
-              @change="getData"
-            />
+            <el-input v-model="queryForm.Product" style="width: 160px" clearable @clear="getData" @change="getData" />
           </el-form-item>
           <el-form-item label="状态" class="mb-2">
-            <el-select
-              v-model="queryForm.Status"
-              style="width: 120px"
-              @change="getData"
-              placeholder="全部"
-              clearable
-            >
+            <el-select v-model="queryForm.Status" style="width: 120px" @change="getData" placeholder="全部" clearable>
               <el-option label="全部" :value="null" />
               <el-option label="未提交" :value="0" />
               <el-option label="已提交" :value="1" />
             </el-select>
           </el-form-item>
           <el-form-item label="创建人" class="mb-2">
-            <el-input
-              v-model="queryForm.OperationUser"
-              style="width: 130px"
-              clearable
-              @clear="getData"
-              @change="getData"
-            />
+            <el-input v-model="queryForm.OperationUser" style="width: 130px" clearable @clear="getData"
+              @change="getData" />
           </el-form-item>
           <el-form-item label="创建时间" class="mb-2">
-            <el-date-picker
-              v-model="queryForm.CreateStartTime"
-              type="datetime"
-              placeholder="开始"
-              value-format="YYYY-MM-DDTHH:mm:ss"
-              style="width: 170px"
-            />
+            <el-date-picker v-model="queryForm.CreateStartTime" type="datetime" placeholder="开始"
+              value-format="YYYY-MM-DDTHH:mm:ss" style="width: 170px" />
             <span class="mx-1">~</span>
-            <el-date-picker
-              v-model="queryForm.CreateEndTime"
-              type="datetime"
-              placeholder="结束"
-              value-format="YYYY-MM-DDTHH:mm:ss"
-              style="width: 170px"
-            />
+            <el-date-picker v-model="queryForm.CreateEndTime" type="datetime" placeholder="结束"
+              value-format="YYYY-MM-DDTHH:mm:ss" style="width: 170px" />
           </el-form-item>
           <el-form-item class="mb-2">
             <el-button type="primary" @click="getData">查询</el-button>
@@ -94,15 +44,8 @@
         </el-form>
       </div>
 
-      <el-table
-        :data="tableData"
-        size="small"
-        style="width: 100%"
-        :height="tableHeight"
-        border
-        fit
-        highlight-current-row
-      >
+      <el-table :data="tableData" size="small" style="width: 100%" :height="tableHeight" border fit
+        highlight-current-row>
         <el-table-column type="index" align="center" label="序号" width="55">
           <template #default="scope">
             <span>{{
@@ -110,55 +53,17 @@
             }}</span>
           </template>
         </el-table-column>
-        <el-table-column
-          prop="CompletionInboundNo"
-          label="入库单号"
-          min-width="150"
-          show-overflow-tooltip
-        />
-        <el-table-column
-          prop="MfgOrder"
-          label="工单号"
-          min-width="130"
-          show-overflow-tooltip
-        />
-        <el-table-column
-          prop="Product"
-          label="产品编码"
-          min-width="130"
-          show-overflow-tooltip
-        />
-        <el-table-column
-          prop="VN"
-          label="VN"
-          min-width="120"
-          show-overflow-tooltip
-        />
-        <el-table-column
-          prop="InboundQty"
-          label="入库数量"
-          width="80"
-          align="center"
-        />
-        <el-table-column
-          prop="WorkCenter"
-          label="车间"
-          min-width="140"
-          show-overflow-tooltip
-        />
-        <el-table-column
-          prop="MfgLine"
-          label="产线"
-          min-width="140"
-          show-overflow-tooltip
-        />
+        <el-table-column prop="CompletionInboundNo" label="入库单号" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="MfgOrder" label="工单号" min-width="130" show-overflow-tooltip />
+        <el-table-column prop="Product" label="产品编码" min-width="130" show-overflow-tooltip />
+        <el-table-column prop="VN" label="VN" min-width="120" show-overflow-tooltip />
+        <el-table-column prop="InboundQty" label="入库数量" width="80" align="center" />
+        <el-table-column prop="WorkCenter" label="车间" min-width="140" show-overflow-tooltip />
+        <el-table-column prop="MfgLine" label="产线" min-width="140" show-overflow-tooltip />
         <el-table-column prop="Status" label="状态" width="80" align="center">
           <template #default="scope">
-            <el-tag
-              :type="scope.row.DataStatus === 1 ? 'success' : 'warning'"
-              size="small"
-              >{{ scope.row.Status }}</el-tag
-            >
+            <el-tag :type="scope.row.DataStatus === 1 ? 'success' : 'warning'" size="small">{{ scope.row.Status
+              }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="CreateUser" label="创建人" width="160" />
@@ -167,80 +72,29 @@
         <el-table-column prop="CompletionTime" label="入库时间" width="170" />
         <el-table-column label="操作" width="180" fixed="right" align="center">
           <template #default="scope">
-            <el-button
-              type="primary"
-              size="small"
-              @click.stop="handleViewDetail(scope.row)"
-              >查看明细</el-button
-            >
-            <el-button
-              type="success"
-              size="small"
-              @click.stop="handleAudit(scope.row)"
-              >FQC审核</el-button
-            >
+            <el-button type="primary" size="small" @click.stop="handleViewDetail(scope.row)">查看明细</el-button>
+            <el-button type="success" size="small" @click.stop="handleAudit(scope.row)">FQC审核</el-button>
           </template>
         </el-table-column>
         <template #empty><el-empty /></template>
       </el-table>
 
       <div class="mt-2">
-        <el-pagination
-          background
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-          :pager-count="5"
-          :current-page="pageObj.currentPage"
-          :page-size="pageObj.pageSize"
-          :page-sizes="[30, 50, 100, 200, 300]"
-          layout="total,sizes, prev, pager, next"
-          :total="total"
-        />
+        <el-pagination background @size-change="handleSizeChange" @current-change="handleCurrentChange" :pager-count="5" size="small"
+          :current-page="pageObj.currentPage" :page-size="pageObj.pageSize" :page-sizes="[30, 50, 100, 200, 300]"
+          layout="total,sizes, prev, pager, next" :total="total" />
       </div>
     </el-card>
 
     <!-- 查看明细 Dialog -->
-    <el-dialog
-      v-model="detailDialogVisible"
-      title="入库单明细"
-      draggable
-      width="800px"
-      :close-on-click-modal="false"
-      align-center
-      @close="detailDialogCancel"
-    >
-      <el-table
-        :data="detailTableData"
-        size="small"
-        border
-        style="width: 100%"
-        max-height="400"
-      >
+    <el-dialog v-model="detailDialogVisible" title="入库单明细" draggable width="800px" :close-on-click-modal="false"
+      align-center @close="detailDialogCancel">
+      <el-table :data="detailTableData" size="small" border style="width: 100%" max-height="400">
         <el-table-column type="index" label="序号" width="55" align="center" />
-        <el-table-column
-          prop="SN"
-          label="SN编码"
-          min-width="160"
-          show-overflow-tooltip
-        />
-        <el-table-column
-          prop="MaterialCode"
-          label="物料编码"
-          min-width="130"
-          show-overflow-tooltip
-        />
-        <el-table-column
-          prop="ProductFamily"
-          label="产品系列"
-          min-width="130"
-          show-overflow-tooltip
-        />
-        <el-table-column
-          prop="ProductDesc"
-          label="产品描述"
-          min-width="130"
-          show-overflow-tooltip
-        />
+        <el-table-column prop="SN" label="SN编码" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="MaterialCode" label="物料编码" min-width="130" show-overflow-tooltip />
+        <el-table-column prop="ProductFamily" label="产品系列" min-width="130" show-overflow-tooltip />
+        <el-table-column prop="ProductDesc" label="产品描述" min-width="130" show-overflow-tooltip />
         <el-table-column prop="Qty" label="数量" width="70" align="center" />
         <template #empty><el-empty description="暂无明细数据" /></template>
       </el-table>
@@ -250,92 +104,45 @@
     </el-dialog>
 
     <!-- FQC审核 Dialog -->
-    <el-dialog
-      v-model="auditDialogVisible"
-      draggable
-      width="500px"
-      :close-on-click-modal="false"
-      align-center
-      @close="auditDialogCancel"
-    >
+    <el-dialog v-model="auditDialogVisible" draggable width="500px" :close-on-click-modal="false" align-center
+      @close="auditDialogCancel">
       <template #header>
         <div class="flex items-center gap-3">
           <span>FQC审核</span>
-          <el-button
-            type="primary"
-            link
-            :loading="inspectionDetailLoading"
-            @click="handleViewInspectionDetail"
-          >
+          <el-button type="primary" link :loading="inspectionDetailLoading" @click="handleViewInspectionDetail">
             查看检验明细
           </el-button>
         </div>
       </template>
-      <el-form
-        ref="auditFormRef"
-        :model="auditForm"
-        :rules="auditRules"
-        label-width="100px"
-        size="default"
-      >
+      <el-form ref="auditFormRef" :model="auditForm" :rules="auditRules" label-width="100px" size="default">
         <el-form-item label="入库单号">
           <el-input v-model="auditForm.CompletionInboundNo" disabled />
         </el-form-item>
         <el-form-item label="审核结果" prop="auditResult">
-          <el-select
-            v-model="auditForm.auditResult"
-            placeholder="请选择审核结果"
-            style="width: 100%"
-          >
+          <el-select v-model="auditForm.auditResult" placeholder="请选择审核结果" style="width: 100%">
             <el-option label="通过" value="通过" />
             <el-option label="不通过" value="不通过" />
           </el-select>
         </el-form-item>
         <el-form-item label="入库仓库" prop="wareHouse">
-          <el-select
-            v-model="auditForm.wareHouse"
-            placeholder="请选择入库仓库"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="item in wareHouseOptions"
-              :key="item.WareHouse"
-              :label="item.Description"
-              :value="item.WareHouse"
-            />
+          <el-select v-model="auditForm.wareHouse" placeholder="请选择入库仓库" style="width: 100%">
+            <el-option v-for="item in wareHouseOptions" :key="item.WareHouse" :label="item.Description"
+              :value="item.WareHouse" />
           </el-select>
         </el-form-item>
         <el-form-item label="审核备注" prop="reviewNotes">
-          <el-input
-            v-model="auditForm.reviewNotes"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入审核备注"
-          />
+          <el-input v-model="auditForm.reviewNotes" type="textarea" :rows="3" placeholder="请输入审核备注" />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="auditDialogCancel">取消</el-button>
-        <el-button
-          type="primary"
-          :loading="auditLoading"
-          @click="handleAuditSubmit"
-          >入库</el-button
-        >
+        <el-button type="primary" :loading="auditLoading" @click="handleAuditSubmit">入库</el-button>
       </template>
     </el-dialog>
 
     <!-- FQC检验明细 Dialog -->
-    <el-dialog
-      v-model="inspectionDetailVisible"
-      title="检验明细"
-      draggable
-      append-to-body
-      width="92%"
-      top="5vh"
-      :close-on-click-modal="false"
-      @close="inspectionDetailDialogCancel"
-    >
+    <el-dialog v-model="inspectionDetailVisible" title="检验明细" draggable append-to-body width="92%" top="5vh"
+      :close-on-click-modal="false" @close="inspectionDetailDialogCancel">
       <div v-loading="inspectionDetailLoading" class="min-h-[260px]">
         <el-descriptions :column="3" border size="small" class="mb-3">
           <el-descriptions-item label="入库单号">
@@ -350,59 +157,43 @@
         </el-descriptions>
 
         <div class="mb-3 flex items-center justify-between">
-          <el-input
-            v-model="inspectionSNKeyword"
-            placeholder="请输入SN（支持模糊搜索）"
-            clearable
-            style="width: 260px"
-          />
-          <el-button
-            type="success"
-            :loading="inspectionExportLoading"
+          <el-input v-model="inspectionSNKeyword" placeholder="请输入SN（支持模糊搜索）" clearable style="width: 260px"
+            size="small" />
+          <el-button type="success" :loading="inspectionExportLoading"
             :disabled="inspectionDetailLoading || inspectionDetailData.Rows.length === 0"
-            @click="handleInspectionDetailExport"
-          >
+            @click="handleInspectionDetailExport" size="small">
             导出
           </el-button>
         </div>
 
-        <el-table
-          :data="filterInspectionRows(inspectionDetailData.Rows)"
-          border
-          stripe
-          size="small"
-          height="560"
-        >
+        <el-table :data="filterInspectionRows(inspectionDetailData.Rows)" border stripe size="small" height="450">
           <el-table-column type="index" label="序号" width="55" fixed="left" align="center" />
           <el-table-column prop="SN" label="批次" width="165" fixed="left" show-overflow-tooltip />
           <el-table-column label="结果" width="90" align="center">
             <template #default="scope">
-              <el-tag
-                v-if="scope.row.InspectionResult"
-                size="small"
-                :type="inspectionResultTagType(scope.row.InspectionResult)"
-              >
+              <el-tag v-if="scope.row.InspectionResult" size="small"
+                :type="inspectionResultTagType(scope.row.InspectionResult)">
                 {{ formatInspectionValue(scope.row.InspectionResult) }}
               </el-tag>
               <span v-else>-</span>
             </template>
           </el-table-column>
-          <el-table-column
-            v-for="column in inspectionDetailData.Columns"
-            :key="column"
-            :label="column"
-            :width="inspectionColumnWidth(column)"
-            show-overflow-tooltip
-          >
+          <el-table-column v-for="column in inspectionDetailData.Columns" :key="column" :label="column"
+            :width="inspectionColumnWidth(column)" show-overflow-tooltip>
             <template #default="scope">
-              <el-tag
-                v-if="isInspectionResultValue(scope.row.values[column])"
-                size="small"
-                :type="inspectionResultTagType(scope.row.values[column])"
-              >
+              <el-tag v-if="isInspectionResultValue(scope.row.values[column])" size="small"
+                :type="inspectionResultTagType(scope.row.values[column])">
                 {{ formatInspectionValue(scope.row.values[column]) }}
               </el-tag>
               <span v-else>{{ displayInspectionValue(scope.row.values[column]) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="附件" width="120" fixed="right" align="center">
+            <template #default="scope">
+              <el-button type="primary" link :disabled="getAttachmentCount(scope.row.SN) === 0"
+                @click.stop="openAttachmentDownload(scope.row.SN)">
+                下载附件{{ getAttachmentCount(scope.row.SN) ? `(${getAttachmentCount(scope.row.SN)})` : '' }}
+              </el-button>
             </template>
           </el-table-column>
           <template #empty><el-empty description="暂无检验数据" /></template>
@@ -411,6 +202,30 @@
 
       <template #footer>
         <el-button @click="inspectionDetailDialogCancel">关闭</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 检验附件下载 Dialog -->
+    <el-dialog v-model="attachmentDialogVisible" :title="`附件下载 - ${attachmentDialogSN || '-'}`" draggable append-to-body
+      width="820px" :close-on-click-modal="false" align-center>
+      <el-table v-if="attachmentDownloadRows.length > 0" :data="attachmentDownloadRows" size="small" border
+        max-height="460">
+        <el-table-column prop="SpecName" label="工序" width="140" show-overflow-tooltip />
+        <el-table-column prop="FileName" label="文件名" min-width="210" show-overflow-tooltip />
+        <el-table-column label="大小" width="90" align="right">
+          <template #default="scope">{{ formatAttachmentSize(scope.row.FileSize) }}</template>
+        </el-table-column>
+        <el-table-column prop="CreateBy" label="上传人" width="140" show-overflow-tooltip />
+        <el-table-column prop="CreateTime" label="上传时间" width="170" />
+        <el-table-column label="操作" width="80" fixed="right" align="center">
+          <template #default="scope">
+            <el-button type="primary" link @click="downloadAttachment(scope.row)">下载</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-empty v-else description="暂无附件" :image-size="72" />
+      <template #footer>
+        <el-button type="primary" @click="attachmentDialogVisible = false">关闭</el-button>
       </template>
     </el-dialog>
   </div>
@@ -589,6 +404,25 @@ const inspectionDetailData = ref<{
 });
 let inspectionDetailRequestId = 0;
 
+// ====== 检验附件 ======
+type AttachmentFile = {
+  Id?: number;
+  FileName?: string;
+  Base64String?: string;
+  FileSize?: number;
+  FileUrl?: string;
+  CreateBy?: string;
+  CreateTime?: string;
+};
+type AttachmentSpecGroup = {
+  SpecName?: string;
+  Files?: AttachmentFile[];
+};
+const inspectionAttachmentsBySN = ref<Record<string, AttachmentSpecGroup[]>>({});
+const attachmentDialogVisible = ref(false);
+const attachmentDialogSN = ref("");
+const attachmentDownloadRows = ref<any[]>([]);
+
 // 表单校验规则
 const auditRules = {
   auditResult: [
@@ -721,6 +555,77 @@ const filterInspectionRows = (rows: any[]) => {
   );
 };
 
+const resetAttachmentDownload = () => {
+  inspectionAttachmentsBySN.value = {};
+  attachmentDialogVisible.value = false;
+  attachmentDialogSN.value = "";
+  attachmentDownloadRows.value = [];
+};
+
+const getAttachmentCount = (snValue: unknown) => {
+  const sn = String(snValue ?? "").trim();
+  return (inspectionAttachmentsBySN.value[sn] || []).reduce(
+    (count, group) => count + (Array.isArray(group.Files) ? group.Files.length : 0),
+    0,
+  );
+};
+
+const openAttachmentDownload = (snValue: unknown) => {
+  const sn = String(snValue ?? "").trim();
+  attachmentDialogSN.value = sn;
+  attachmentDownloadRows.value = (inspectionAttachmentsBySN.value[sn] || []).flatMap((group) =>
+    (Array.isArray(group.Files) ? group.Files : []).map((file) => ({
+      ...file,
+      SpecName: group.SpecName || "",
+    })),
+  );
+  attachmentDialogVisible.value = true;
+};
+
+const formatAttachmentSize = (sizeValue: unknown) => {
+  const size = Number(sizeValue);
+  if (!Number.isFinite(size) || size < 0) return "-";
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / 1024 / 1024).toFixed(1)} MB`;
+};
+
+const downloadAttachment = (file: AttachmentFile) => {
+  try {
+    const rawBase64 = String(file.Base64String || "").trim();
+    if (!rawBase64) {
+      ElMessage.warning("附件内容为空，无法下载");
+      return;
+    }
+
+    const dataUriMatch = rawBase64.match(/^data:([^;,]+)?;base64,(.*)$/s);
+    const mimeType = dataUriMatch?.[1] || "application/octet-stream";
+    const base64 = (dataUriMatch?.[2] || rawBase64).replace(/\s/g, "");
+    const parts: BlobPart[] = [];
+    const chunkSize = 32768;
+    for (let offset = 0; offset < base64.length; offset += chunkSize) {
+      const binary = window.atob(base64.slice(offset, offset + chunkSize));
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index += 1) {
+        bytes[index] = binary.charCodeAt(index);
+      }
+      parts.push(bytes);
+    }
+
+    const objectUrl = URL.createObjectURL(new Blob(parts, { type: mimeType }));
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = file.FileName || "附件";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  } catch (error) {
+    console.error("下载附件失败", error);
+    ElMessage.error("附件下载失败，请稍后重试");
+  }
+};
+
 const formatInspectionExportTime = () => {
   const now = new Date();
   const part = (value: number) => String(value).padStart(2, "0");
@@ -783,6 +688,7 @@ const handleViewInspectionDetail = async () => {
 
   const requestId = ++inspectionDetailRequestId;
   inspectionSNKeyword.value = "";
+  resetAttachmentDownload();
   inspectionDetailData.value = {
     CompletionInboundNo: completionInboundNo,
     Columns: [],
@@ -806,6 +712,14 @@ const handleViewInspectionDetail = async () => {
       Columns: table.columns,
       Rows: table.rows,
     };
+
+    const attachmentMap: Record<string, AttachmentSpecGroup[]> = {};
+    const attachmentItems = Array.isArray(res.content2) ? res.content2 : [];
+    attachmentItems.forEach((item: any) => {
+      const sn = String(item?.SN ?? "").trim();
+      if (sn) attachmentMap[sn] = Array.isArray(item.Specs) ? item.Specs : [];
+    });
+    inspectionAttachmentsBySN.value = attachmentMap;
   } catch (error: any) {
     if (requestId === inspectionDetailRequestId) {
       ElMessage.error(error?.msg || "获取检验明细失败");
@@ -820,6 +734,7 @@ const inspectionDetailDialogCancel = () => {
   inspectionDetailVisible.value = false;
   inspectionDetailLoading.value = false;
   inspectionSNKeyword.value = "";
+  resetAttachmentDownload();
   inspectionDetailData.value = {
     CompletionInboundNo: "",
     Columns: [],
@@ -921,3 +836,10 @@ onBeforeUnmount(() => {
   window.removeEventListener("resize", updateTableHeight);
 });
 </script>
+
+
+<style scoped>
+.el-pagination {
+    justify-content: center;
+}
+</style>

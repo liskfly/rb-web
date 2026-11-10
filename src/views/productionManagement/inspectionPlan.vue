@@ -199,6 +199,7 @@
             @size-change="handleSizeChange"
             @current-change="handleCurrentChange"
             :pager-count="5"
+            size="small"
             :current-page="pageObj.currentPage"
             :page-size="pageObj.pageSize"
             :page-sizes="[30, 50, 100, 200, 300]"
@@ -1034,5 +1035,9 @@ onBeforeUnmount(() => {
   min-height: 0;
   display: flex;
   flex-direction: column;
+}
+
+.el-pagination {
+  justify-content: center;
 }
 </style>

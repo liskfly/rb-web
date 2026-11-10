@@ -182,6 +182,7 @@
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
           :pager-count="5"
+          size="small"
           :current-page="pageObj.currentPage"
           :page-size="pageObj.pageSize"
           :page-sizes="[30, 50, 100, 200, 300]"
@@ -816,5 +817,9 @@ onBeforeUnmount(() => {
 /* 操作列按钮间距 */
 .el-table .cell .el-button + .el-button {
   margin-left: 4px;
+}
+
+.el-pagination {
+  justify-content: center;
 }
 </style>

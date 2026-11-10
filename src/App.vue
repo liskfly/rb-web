@@ -10,5 +10,7 @@ ElDialog.props.lockScroll.default = false;
 </template>
 
 <style scoped>
-
+.el-pagination {
+    justify-content: center;
+}
 </style>

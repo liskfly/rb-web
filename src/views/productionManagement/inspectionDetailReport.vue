@@ -34,9 +34,15 @@
           />
         </el-form-item>
         <el-form-item label="结果">
-          <el-select v-model="queryForm.InspectionResult" clearable placeholder="请选择结果">
-            <el-option label="合格" value="合格" />
-            <el-option label="不合格" value="不合格" />
+          <el-select
+            v-model="queryForm.InspectionResult"
+            clearable
+            placeholder="请选择结果"
+            @change="handleQuery"
+          >
+            <el-option label="全部合格" value="全部合格" />
+            <el-option label="部分合格" value="部分合格" />
+            <el-option label="全部不合格" value="全部不合格" />
           </el-select>
         </el-form-item>
         <el-form-item label="检验时间">

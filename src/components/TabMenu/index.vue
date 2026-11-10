@@ -161,7 +161,7 @@ const routers = computed(() => permissionStore.getRouters);
 console.log(routers);
 
 const tabRouters = computed(() =>
-  unref(routers).filter((v: any) => !v?.meta?.hidden)
+  unref(routers).filter((v: any) => !v?.meta?.hidden && v.path !== '/dashboard')
 );
 
 watch(

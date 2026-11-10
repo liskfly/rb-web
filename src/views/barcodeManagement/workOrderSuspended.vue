@@ -207,7 +207,7 @@
 
       <div class="mt-2 flex-none">
         <el-pagination background @size-change="handleSizeChange" @current-change="handleCurrentChange"
-          :pager-count="5" :current-page="pageObj.currentPage" :page-size="pageObj.pageSize"
+          :pager-count="5" size="small" :current-page="pageObj.currentPage" :page-size="pageObj.pageSize"
           :page-sizes="[30, 50, 100, 200, 300]" layout="total,sizes, prev, pager, next" :total="total" />
       </div>
     </el-card>
@@ -528,5 +528,9 @@ onMounted(() => {
 <style scoped>
 .work-order-table :deep(.el-table__body tr:hover > td.el-table__cell) {
   background-color: #cfe3fb !important;
+}
+
+.el-pagination {
+  justify-content: center;
 }
 </style>

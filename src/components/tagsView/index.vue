@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, onMounted, unref, ref, watch, onActivated, onBeforeMount, reactive } from 'vue'
+import { computed, onMounted, unref, ref, watch, onActivated, onBeforeMount, onBeforeUnmount, reactive } from 'vue'
 import { useTagsViewStore } from '@/stores/modules/tagsView'
 import { usePermissionStoreWithOut } from '@/stores/modules/permission'
 import { useRouter, type RouteLocationNormalizedLoaded } from 'vue-router'
@@ -26,6 +26,7 @@ import { ElNotification, ElMessage, ElMessageBox } from "element-plus";
 const visitedViews = computed(() => tagsViewStore.getVisitedViews)
 const routers = computed(() => permissionStore.getRouters)
 const setSelectTag = tagsViewStore.setSelectedTag
+const selectTag = computed(() => tagsViewStore.getSelectedTag)
 const affixTagArr = ref<any>([])
 const solow=ref(false)
 const versionForm = ref({
@@ -403,18 +404,28 @@ onBeforeMount(() => {
     // console.log(treeToList(unref(levelList)));
 });
 // 全屏方法
+const isFull = ref(false)
 const fullScreen = () => {
     // 是否全屏，否为null
-    let full = document.fullscreenElement
-    // console.log(full)
+    const full = document.fullscreenElement
     if (!full) {
         // document自带的全屏方法
         document.documentElement.requestFullscreen()
     } else {
-        // document自带的推出全屏方法
+        // document自带的退出全屏方法
         document.exitFullscreen()
     }
 }
+const onFullscreenChange = () => {
+    isFull.value = !!document.fullscreenElement
+}
+onMounted(() => {
+    document.addEventListener('fullscreenchange', onFullscreenChange)
+})
+onBeforeUnmount(() => {
+    document.removeEventListener('fullscreenchange', onFullscreenChange)
+})
+
 </script>
 <template>
     <div class="bood  h-[35px] flex w-full relative bg-[#fff]">
@@ -460,9 +471,9 @@ const fullScreen = () => {
                         <div class="flex items-center gap-3">
 
                             <div class="flex items-center">
-                                <el-tooltip content="全屏/正常" placement="top">
+                                <el-tooltip :content="isFull ? '退出全屏' : '全屏'" placement="top">
                                     <el-icon size="24" color="#777777" @click="fullScreen()">
-                                        <FullScreen />
+                                        <component :is="isFull ? 'Minus' : 'FullScreen'" />
                                     </el-icon>
                                 </el-tooltip>
                             </div>
@@ -500,6 +511,22 @@ const fullScreen = () => {
                 </div>
             </el-scrollbar>
 
+        </div>
+        <div v-if="!appStore.getSystemType" class="tags-actions">
+            <div @click="fullScreen()" class="tags-action-btn">
+                <el-tooltip :content="isFull ? '退出全屏' : '全屏'" placement="bottom">
+                    <el-icon :size="23" color="#6e7079">
+                        <component :is="isFull ? 'Minus' : 'FullScreen'" />
+                    </el-icon>
+                </el-tooltip>
+            </div>
+            <div @click="refreshSelectedTag(selectTag)" class="tags-action-btn">
+                <el-tooltip content="刷新当前页面" placement="bottom">
+                    <el-icon :size="23" color="#6e7079">
+                        <Refresh />
+                    </el-icon>
+                </el-tooltip>
+            </div>
         </div>
         <el-dialog :append-to-body="true" :close-on-click-modal="false" v-model="addVisible" title="设置" width="400px"
             @close="addCancel">
@@ -612,5 +639,30 @@ const fullScreen = () => {
     background-color: #006487;
     border: 1px solid #006487;
 
+}
+
+.tags-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 8px;
+    border-left: 1px solid #cbd5e1;
+    height: 100%;
+    flex-shrink: 0;
+    background: #fff;
+}
+
+.tags-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    height: 100%;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+        background-color: #f5f5f5;
+    }
 }
 </style>
